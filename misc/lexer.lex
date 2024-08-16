@@ -55,6 +55,8 @@
 [sS][hH][rR] {return SHR;}
 [lL][dD] {return LD;}
 [sS][tT] {return ST;}
+[cC][sS][rR][rR][dD] {return CSRRD;}
+[cC][sS][rR][wW][rR] {return CSRWR;}
 
 [rR]0 {yylval.stringType = new std::string("R0"); return R0;}
 [rR]1 {yylval.stringType = new std::string("R1"); return R1;}
