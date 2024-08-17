@@ -51,6 +51,7 @@ program:
 
 statement:
   label 
+
   | label directive {}
   | label instruction {}
   | directive {}
@@ -158,6 +159,7 @@ reg:
   ;
 
 int parser(int argc, char **argv) {
+  FILE * fp
   const char* filename = (argc == 2) ? argv[1] : (argc == 4) ? argv[3] : NULL;
   if (filename) {
     fp = fopen(filename, "r");
