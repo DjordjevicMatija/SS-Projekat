@@ -1,18 +1,25 @@
-%code requires {
-int yylex(); 
-
+%code requires{
 #include <stdio.h>
 #include <string.h>
+#include <vector>
+#include <string>
 using namespace std;
 
 extern FILE *yyin;
 int yyerror(const char *p);
 int yylex();
+typedef vector<string*> strVec;
+}
+
+%union{
+  int val;
+  string* stringType;
+  strVec* stringVector;
 }
 
 %token STAR COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
 %token GLOBALDIR EXTERNDIR SECTIONDIR WORDDIR SKIPDIR ASCIIDIR EQUDIR ENDDIR
-%token HALT INT IRET CALL RET JMP BEQ BNE BGT PUSH POP XCHG ADD SUB MUL DIV NOT AND OR XOR SHL SHR LD ST
+%token HALT INT IRET CALL RET JMP BEQ BNE BGT PUSH POP XCHG ADD SUB MUL DIV NOT AND OR XOR SHL SHR LD ST CSRRD CSRWR
 
 %token <stringType> R0 
 %token <stringType> R1 
@@ -45,6 +52,8 @@ int yylex();
 %type <stringType> csr
 %type <stringType> reg
 
+%%
+
 program:
   | program statement EOL
   ;
@@ -52,23 +61,23 @@ program:
 statement:
   label 
 
-  | label directive {}
-  | label instruction {}
-  | directive {}
-  | instruction {}
+  | label directive
+  | label instruction
+  | directive
+  | instruction
   ;
 
 label:
-  SYMBOL COLON {}
+  SYMBOL COLON {printf("LABEL parser\n");}
   ;
 
 directive:
-  GLOBALDIR symbolList {}
+  GLOBALDIR symbolList {printf("GLOBALDIR parser\n");}
   | EXTERNDIR symbolList {}
-  | SECTIONDIR SYMBOL {}
-  | WORDDIR symbolOrLiteralList {}
-  | SKIPDIR LITERAL {}
-  | ENDDIR {return -1;}
+  | SECTIONDIR SYMBOL {printf("SECTIONDIR parser\n");}
+  | WORDDIR symbolOrLiteralList {printf("WORDDIR parser\n");}
+  | SKIPDIR LITERAL {printf("SKIPDIR parser\n");}
+  | ENDDIR {printf("ENDDIR parser\n"); return -1;}
   ;
 
 instruction:
@@ -84,7 +93,7 @@ instruction:
   | PUSH gpr {}
   | POP gpr {}
   | XCHG gpr COMMA gpr {}
-  | ADD gpr COMMA gpr {}
+  | ADD gpr COMMA gpr {printf("ADD parser\n");}
   | SUB gpr COMMA gpr {}
   | MUL gpr COMMA gpr {}
   | DIV gpr COMMA gpr {}
@@ -123,9 +132,9 @@ dataOperand:
   | LITERAL {}
   | SYMBOL {}
   | reg {}
-  | LEFTBRACKET reg RIGHTBRACKET
-  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET
-  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET
+  | LEFTBRACKET reg RIGHTBRACKET {}
+  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {}
+  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {}
   ;
 
 gpr:
@@ -158,8 +167,10 @@ reg:
   | csr
   ;
 
-int parser(int argc, char **argv) {
-  FILE * fp
+  %%
+
+  int main(int argc, char **argv) {
+  FILE * fp;
   const char* filename = (argc == 2) ? argv[1] : (argc == 4) ? argv[3] : NULL;
   if (filename) {
     fp = fopen(filename, "r");
