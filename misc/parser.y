@@ -51,6 +51,7 @@ program:
 
 statement:
   label 
+
   | label directive {}
   | label instruction {}
   | directive {}
