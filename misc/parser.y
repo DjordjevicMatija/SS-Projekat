@@ -51,15 +51,10 @@ program:
 
 statement:
   label 
-
   | label directive {}
-
-  | directive {}
-
   | label instruction {}
-
+  | directive {}
   | instruction {}
-
   ;
 
 label:
