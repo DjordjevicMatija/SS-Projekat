@@ -1,20 +1,21 @@
 %code requires{
 #include <stdio.h>
 #include <string.h>
-#include <vector>
-#include <string>
+#include "assembler.hpp"
+
 using namespace std;
 
 extern FILE *yyin;
 int yyerror(const char *p);
 int yylex();
-typedef vector<string*> strVec;
 }
 
 %union{
   int val;
   string* stringType;
-  strVec* stringVector;
+  JumpArgument* jumpArg;
+  DataArguments* dataArgs;
+  DirectiveArguments* directiveArgs;
 }
 
 %token STAR COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
@@ -44,10 +45,10 @@ typedef vector<string*> strVec;
 %token <stringType> SYMBOL
 %token <stringType> LITERAL
 
-%type <stringVector> symbolList
-%type <stringVector> symbolOrLiteralList
-%type <stringType> jumpOperand
-%type <stringVector> dataOperand
+%type <directiveArgs> symbolList
+%type <directiveArgs> symbolOrLiteralList
+%type <jumpArg> jumpOperand
+%type <dataArgs> dataOperand
 %type <stringType> gpr
 %type <stringType> csr
 %type <stringType> reg
