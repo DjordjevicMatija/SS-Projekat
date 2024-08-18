@@ -1,20 +1,21 @@
 %code requires{
 #include <stdio.h>
 #include <string.h>
-#include <vector>
-#include <string>
+#include "assembler.hpp"
+
 using namespace std;
 
 extern FILE *yyin;
 int yyerror(const char *p);
 int yylex();
-typedef vector<string*> strVec;
 }
 
 %union{
   int val;
   string* stringType;
-  strVec* stringVector;
+  JumpArgument* jumpArg;
+  DataArguments* dataArgs;
+  DirectiveArguments* directiveArgs;
 }
 
 %token STAR COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
@@ -44,10 +45,10 @@ typedef vector<string*> strVec;
 %token <stringType> SYMBOL
 %token <stringType> LITERAL
 
-%type <stringVector> symbolList
-%type <stringVector> symbolOrLiteralList
-%type <stringType> jumpOperand
-%type <stringVector> dataOperand
+%type <directiveArgs> symbolList
+%type <directiveArgs> symbolOrLiteralList
+%type <jumpArg> jumpOperand
+%type <dataArgs> dataOperand
 %type <stringType> gpr
 %type <stringType> csr
 %type <stringType> reg
@@ -60,7 +61,6 @@ program:
 
 statement:
   label 
-
   | label directive
   | label instruction
   | directive
@@ -68,98 +68,98 @@ statement:
   ;
 
 label:
-  SYMBOL COLON {printf("LABEL parser\n");}
+  SYMBOL COLON {asmLabel($1);}
   ;
 
 directive:
-  GLOBALDIR symbolList {printf("GLOBALDIR parser\n");}
-  | EXTERNDIR symbolList {}
-  | SECTIONDIR SYMBOL {printf("SECTIONDIR parser\n");}
-  | WORDDIR symbolOrLiteralList {printf("WORDDIR parser\n");}
-  | SKIPDIR LITERAL {printf("SKIPDIR parser\n");}
-  | ENDDIR {printf("ENDDIR parser\n"); return -1;}
+  GLOBALDIR symbolList {asmGlobalDir($2);}
+  | EXTERNDIR symbolList {asmExternDir($2);}
+  | SECTIONDIR SYMBOL {asmSectionDir($2);}
+  | WORDDIR symbolOrLiteralList {asmWordDir($2);}
+  | SKIPDIR LITERAL {asmSkipDir($2);}
+  | ENDDIR {asmEndDir(); return -1;}
   ;
 
 instruction:
-  HALT {}
-  | INT {}
-  | IRET {}
-  | CALL jumpOperand {}
-  | RET {}
-  | JMP jumpOperand {}
-  | BEQ gpr COMMA gpr COMMA jumpOperand {}
-  | BNE gpr COMMA gpr COMMA jumpOperand {}
-  | BGT gpr COMMA gpr COMMA jumpOperand {}
-  | PUSH gpr {}
-  | POP gpr {}
-  | XCHG gpr COMMA gpr {}
-  | ADD gpr COMMA gpr {printf("ADD parser\n");}
-  | SUB gpr COMMA gpr {}
-  | MUL gpr COMMA gpr {}
-  | DIV gpr COMMA gpr {}
-  | NOT gpr {}
-  | AND gpr COMMA gpr {}
-  | OR gpr COMMA gpr {}
-  | XOR gpr COMMA gpr {}
-  | SHL gpr COMMA gpr {}
-  | SHR gpr COMMA gpr {}
-  | LD dataOperand COMMA gpr {}
-  | ST gpr COMMA dataOperand {}
-  | CSRRD csr COMMA gpr {}
-  | CSRWR gpr COMMA csr {}
+  HALT {asmHALT();}
+  | INT {asmINT ();}
+  | IRET {asmIRET();}
+  | CALL jumpOperand {asmCALL($2);}
+  | RET {asmRET ();}
+  | JMP jumpOperand {asmJMP($2);}
+  | BEQ gpr COMMA gpr COMMA jumpOperand {asmBEQ($2, $4, $6);}
+  | BNE gpr COMMA gpr COMMA jumpOperand {asmBNE($2, $4, $6);}
+  | BGT gpr COMMA gpr COMMA jumpOperand {asmBGT($2, $4, $6);}
+  | PUSH gpr {asmPUSH($2);}
+  | POP gpr {asmPOP($2);}
+  | XCHG gpr COMMA gpr {asmXCHG($2, $4);}
+  | ADD gpr COMMA gpr {asmADD($2, $4);}
+  | SUB gpr COMMA gpr {asmSUB($2, $4);}
+  | MUL gpr COMMA gpr {asmMUL($2, $4);}
+  | DIV gpr COMMA gpr {asmDIV($2, $4);}
+  | NOT gpr {asmNOT($2);}
+  | AND gpr COMMA gpr {asmAND($2, $4);}
+  | OR gpr COMMA gpr {asmOR($2, $4);}
+  | XOR gpr COMMA gpr {asmXOR($2, $4);}
+  | SHL gpr COMMA gpr {asmSHL($2, $4);}
+  | SHR gpr COMMA gpr {asmSHR($2, $4);}
+  | LD dataOperand COMMA gpr {asmLD($2, $4);}
+  | ST gpr COMMA dataOperand {asmST($2, $4);}
+  | CSRRD csr COMMA gpr {asmCSRRD($2, $4);}
+  | CSRWR gpr COMMA csr {asmCSRWR($2, $4);}
   ;
 
 symbolList:
-  SYMBOL {}
-  | symbolList COMMA SYMBOL {}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::SYMBOL);}
+  | symbolList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::SYMBOL); $$ = $1;}
   ;
 
 symbolOrLiteralList:
-  SYMBOL {}
-  | LITERAL {}
-  | symbolOrLiteralList COMMA SYMBOL {}
-  | symbolOrLiteralList COMMA LITERAL {}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::SYMBOL);}
+  | LITERAL {$$ = new DirectiveArguments($1, OperandType::LITERAL);}
+  | symbolOrLiteralList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::SYMBOL); $$ = $1;}
+  | symbolOrLiteralList COMMA LITERAL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::LITERAL); $$ = $1;}
   ;
 
 jumpOperand:
-  LITERAL {}
-  | SYMBOL {}
+  LITERAL {$$ = new JumpArgument($1, OperandType::LITERAL);}
+  | SYMBOL {$$ = new JumpArgument($1, OperandType::SYMBOL);}
   ;
 
 dataOperand:
-  DOLLAR LITERAL {}
-  | DOLLAR SYMBOL {}
-  | LITERAL {}
-  | SYMBOL {}
-  | reg {}
-  | LEFTBRACKET reg RIGHTBRACKET {}
-  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {}
-  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {}
+  DOLLAR LITERAL {$$ = new DataArguments($2, OperandType::LITERAL, AddressType::VALUE_LITERAL);}
+  | DOLLAR SYMBOL {$$ = new DataArguments($2, OperandType::SYMBOL, AddressType::VALUE_SYMBOL);}
+  | LITERAL {$$ = new DataArguments($1, OperandType::LITERAL, AddressType::MEM_LITERAL);}
+  | SYMBOL {$$ = new DataArguments($1, OperandType::SYMBOL, AddressType::MEM_SYMBOL);}
+  | reg {$$ = new DataArguments($1, OperandType::REG, AddressType:VALUE_REG:);}
+  | LEFTBRACKET reg RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG);}
+  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_LITERAL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::LITERAL);}
+  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_SYMBOL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::SYMBOL);}
   ;
 
 gpr:
-  PERCENTAGE R0 {}
-  | PERCENTAGE R1 {}
-  | PERCENTAGE R2 {}
-  | PERCENTAGE R3 {}
-  | PERCENTAGE R4 {}
-  | PERCENTAGE R5 {}
-  | PERCENTAGE R6 {}
-  | PERCENTAGE R7 {}
-  | PERCENTAGE R8 {}
-  | PERCENTAGE R9 {}
-  | PERCENTAGE R10 {}
-  | PERCENTAGE R11 {}
-  | PERCENTAGE R12 {}
-  | PERCENTAGE R13 {}
-  | PERCENTAGE SP {}
-  | PERCENTAGE PC {}
+  PERCENTAGE R0 {$$ = $2}
+  | PERCENTAGE R1 {$$ = $2}
+  | PERCENTAGE R2 {$$ = $2}
+  | PERCENTAGE R3 {$$ = $2}
+  | PERCENTAGE R4 {$$ = $2}
+  | PERCENTAGE R5 {$$ = $2}
+  | PERCENTAGE R6 {$$ = $2}
+  | PERCENTAGE R7 {$$ = $2}
+  | PERCENTAGE R8 {$$ = $2}
+  | PERCENTAGE R9 {$$ = $2}
+  | PERCENTAGE R10 {$$ = $2}
+  | PERCENTAGE R11 {$$ = $2}
+  | PERCENTAGE R12 {$$ = $2}
+  | PERCENTAGE R13 {$$ = $2}
+  | PERCENTAGE SP {$$ = $2}
+  | PERCENTAGE PC {$$ = $2}
   ;
 
 csr:
-  PERCENTAGE STATUS {}
-  | PERCENTAGE HANDLER {}
-  | PERCENTAGE CAUSE {}
+  PERCENTAGE STATUS {$$ = $2}
+  | PERCENTAGE HANDLER {$$ = $2}
+  | PERCENTAGE CAUSE {$$ = $2}
   ;
 
 reg:

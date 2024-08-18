@@ -111,16 +111,15 @@ extern int yydebug;
 
 #include <stdio.h>
 #include <string.h>
-#include <vector>
-#include <string>
+#include "assembler.hpp"
+
 using namespace std;
 
 extern FILE *yyin;
 int yyerror(const char *p);
 int yylex();
-typedef vector<string*> strVec;
 
-#line 124 "parser.tab.cpp"
+#line 123 "parser.tab.cpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -198,13 +197,15 @@ typedef vector<string*> strVec;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 14 "misc/parser.y"
+#line 13 "misc/parser.y"
 
   int val;
   string* stringType;
-  strVec* stringVector;
+  JumpArgument* jumpArg;
+  DataArguments* dataArgs;
+  DirectiveArguments* directiveArgs;
 
-#line 208 "parser.tab.cpp"
+#line 209 "parser.tab.cpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -586,14 +587,14 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    57,    57,    58,    62,    64,    65,    66,    67,    71,
-      75,    76,    77,    78,    79,    80,    84,    85,    86,    87,
-      88,    89,    90,    91,    92,    93,    94,    95,    96,    97,
-      98,    99,   100,   101,   102,   103,   104,   105,   106,   107,
-     108,   109,   113,   114,   118,   119,   120,   121,   125,   126,
-     130,   131,   132,   133,   134,   135,   136,   137,   141,   142,
-     143,   144,   145,   146,   147,   148,   149,   150,   151,   152,
-     153,   154,   155,   156,   160,   161,   162,   166,   167
+       0,    58,    58,    59,    63,    65,    66,    67,    68,    72,
+      76,    77,    78,    79,    80,    81,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    94,    95,    96,    97,    98,
+      99,   100,   101,   102,   103,   104,   105,   106,   107,   108,
+     109,   110,   114,   115,   119,   120,   121,   122,   126,   127,
+     131,   132,   133,   134,   135,   136,   137,   138,   142,   143,
+     144,   145,   146,   147,   148,   149,   150,   151,   152,   153,
+     154,   155,   156,   157,   161,   162,   163,   167,   168
 };
 #endif
 
@@ -1492,415 +1493,415 @@ yyreduce:
   switch (yyn)
     {
   case 9:
-#line 71 "misc/parser.y"
+#line 72 "misc/parser.y"
                {printf("LABEL parser\n");}
-#line 1498 "parser.tab.cpp"
+#line 1499 "parser.tab.cpp"
     break;
 
   case 10:
-#line 75 "misc/parser.y"
+#line 76 "misc/parser.y"
                        {printf("GLOBALDIR parser\n");}
-#line 1504 "parser.tab.cpp"
+#line 1505 "parser.tab.cpp"
     break;
 
   case 11:
-#line 76 "misc/parser.y"
+#line 77 "misc/parser.y"
                          {}
-#line 1510 "parser.tab.cpp"
+#line 1511 "parser.tab.cpp"
     break;
 
   case 12:
-#line 77 "misc/parser.y"
+#line 78 "misc/parser.y"
                       {printf("SECTIONDIR parser\n");}
-#line 1516 "parser.tab.cpp"
+#line 1517 "parser.tab.cpp"
     break;
 
   case 13:
-#line 78 "misc/parser.y"
+#line 79 "misc/parser.y"
                                 {printf("WORDDIR parser\n");}
-#line 1522 "parser.tab.cpp"
+#line 1523 "parser.tab.cpp"
     break;
 
   case 14:
-#line 79 "misc/parser.y"
+#line 80 "misc/parser.y"
                     {printf("SKIPDIR parser\n");}
-#line 1528 "parser.tab.cpp"
+#line 1529 "parser.tab.cpp"
     break;
 
   case 15:
-#line 80 "misc/parser.y"
+#line 81 "misc/parser.y"
            {printf("ENDDIR parser\n"); return -1;}
-#line 1534 "parser.tab.cpp"
+#line 1535 "parser.tab.cpp"
     break;
 
   case 16:
-#line 84 "misc/parser.y"
+#line 85 "misc/parser.y"
        {}
-#line 1540 "parser.tab.cpp"
+#line 1541 "parser.tab.cpp"
     break;
 
   case 17:
-#line 85 "misc/parser.y"
+#line 86 "misc/parser.y"
         {}
-#line 1546 "parser.tab.cpp"
+#line 1547 "parser.tab.cpp"
     break;
 
   case 18:
-#line 86 "misc/parser.y"
+#line 87 "misc/parser.y"
          {}
-#line 1552 "parser.tab.cpp"
+#line 1553 "parser.tab.cpp"
     break;
 
   case 19:
-#line 87 "misc/parser.y"
+#line 88 "misc/parser.y"
                      {}
-#line 1558 "parser.tab.cpp"
+#line 1559 "parser.tab.cpp"
     break;
 
   case 20:
-#line 88 "misc/parser.y"
+#line 89 "misc/parser.y"
         {}
-#line 1564 "parser.tab.cpp"
+#line 1565 "parser.tab.cpp"
     break;
 
   case 21:
-#line 89 "misc/parser.y"
+#line 90 "misc/parser.y"
                     {}
-#line 1570 "parser.tab.cpp"
+#line 1571 "parser.tab.cpp"
     break;
 
   case 22:
-#line 90 "misc/parser.y"
+#line 91 "misc/parser.y"
                                         {}
-#line 1576 "parser.tab.cpp"
+#line 1577 "parser.tab.cpp"
     break;
 
   case 23:
-#line 91 "misc/parser.y"
+#line 92 "misc/parser.y"
                                         {}
-#line 1582 "parser.tab.cpp"
+#line 1583 "parser.tab.cpp"
     break;
 
   case 24:
-#line 92 "misc/parser.y"
+#line 93 "misc/parser.y"
                                         {}
-#line 1588 "parser.tab.cpp"
+#line 1589 "parser.tab.cpp"
     break;
 
   case 25:
-#line 93 "misc/parser.y"
+#line 94 "misc/parser.y"
              {}
-#line 1594 "parser.tab.cpp"
+#line 1595 "parser.tab.cpp"
     break;
 
   case 26:
-#line 94 "misc/parser.y"
+#line 95 "misc/parser.y"
             {}
-#line 1600 "parser.tab.cpp"
+#line 1601 "parser.tab.cpp"
     break;
 
   case 27:
-#line 95 "misc/parser.y"
+#line 96 "misc/parser.y"
                        {}
-#line 1606 "parser.tab.cpp"
+#line 1607 "parser.tab.cpp"
     break;
 
   case 28:
-#line 96 "misc/parser.y"
+#line 97 "misc/parser.y"
                       {printf("ADD parser\n");}
-#line 1612 "parser.tab.cpp"
+#line 1613 "parser.tab.cpp"
     break;
 
   case 29:
-#line 97 "misc/parser.y"
+#line 98 "misc/parser.y"
                       {}
-#line 1618 "parser.tab.cpp"
+#line 1619 "parser.tab.cpp"
     break;
 
   case 30:
-#line 98 "misc/parser.y"
+#line 99 "misc/parser.y"
                       {}
-#line 1624 "parser.tab.cpp"
+#line 1625 "parser.tab.cpp"
     break;
 
   case 31:
-#line 99 "misc/parser.y"
+#line 100 "misc/parser.y"
                       {}
-#line 1630 "parser.tab.cpp"
+#line 1631 "parser.tab.cpp"
     break;
 
   case 32:
-#line 100 "misc/parser.y"
+#line 101 "misc/parser.y"
             {}
-#line 1636 "parser.tab.cpp"
+#line 1637 "parser.tab.cpp"
     break;
 
   case 33:
-#line 101 "misc/parser.y"
+#line 102 "misc/parser.y"
                       {}
-#line 1642 "parser.tab.cpp"
+#line 1643 "parser.tab.cpp"
     break;
 
   case 34:
-#line 102 "misc/parser.y"
+#line 103 "misc/parser.y"
                      {}
-#line 1648 "parser.tab.cpp"
+#line 1649 "parser.tab.cpp"
     break;
 
   case 35:
-#line 103 "misc/parser.y"
+#line 104 "misc/parser.y"
                       {}
-#line 1654 "parser.tab.cpp"
+#line 1655 "parser.tab.cpp"
     break;
 
   case 36:
-#line 104 "misc/parser.y"
+#line 105 "misc/parser.y"
                       {}
-#line 1660 "parser.tab.cpp"
+#line 1661 "parser.tab.cpp"
     break;
 
   case 37:
-#line 105 "misc/parser.y"
+#line 106 "misc/parser.y"
                       {}
-#line 1666 "parser.tab.cpp"
+#line 1667 "parser.tab.cpp"
     break;
 
   case 38:
-#line 106 "misc/parser.y"
+#line 107 "misc/parser.y"
                              {}
-#line 1672 "parser.tab.cpp"
+#line 1673 "parser.tab.cpp"
     break;
 
   case 39:
-#line 107 "misc/parser.y"
+#line 108 "misc/parser.y"
                              {}
-#line 1678 "parser.tab.cpp"
+#line 1679 "parser.tab.cpp"
     break;
 
   case 40:
-#line 108 "misc/parser.y"
+#line 109 "misc/parser.y"
                         {}
-#line 1684 "parser.tab.cpp"
+#line 1685 "parser.tab.cpp"
     break;
 
   case 41:
-#line 109 "misc/parser.y"
+#line 110 "misc/parser.y"
                         {}
-#line 1690 "parser.tab.cpp"
+#line 1691 "parser.tab.cpp"
     break;
 
   case 42:
-#line 113 "misc/parser.y"
+#line 114 "misc/parser.y"
          {}
-#line 1696 "parser.tab.cpp"
+#line 1697 "parser.tab.cpp"
     break;
 
   case 43:
-#line 114 "misc/parser.y"
+#line 115 "misc/parser.y"
                             {}
-#line 1702 "parser.tab.cpp"
+#line 1703 "parser.tab.cpp"
     break;
 
   case 44:
-#line 118 "misc/parser.y"
+#line 119 "misc/parser.y"
          {}
-#line 1708 "parser.tab.cpp"
+#line 1709 "parser.tab.cpp"
     break;
 
   case 45:
-#line 119 "misc/parser.y"
+#line 120 "misc/parser.y"
             {}
-#line 1714 "parser.tab.cpp"
+#line 1715 "parser.tab.cpp"
     break;
 
   case 46:
-#line 120 "misc/parser.y"
+#line 121 "misc/parser.y"
                                      {}
-#line 1720 "parser.tab.cpp"
+#line 1721 "parser.tab.cpp"
     break;
 
   case 47:
-#line 121 "misc/parser.y"
+#line 122 "misc/parser.y"
                                       {}
-#line 1726 "parser.tab.cpp"
+#line 1727 "parser.tab.cpp"
     break;
 
   case 48:
-#line 125 "misc/parser.y"
+#line 126 "misc/parser.y"
           {}
-#line 1732 "parser.tab.cpp"
+#line 1733 "parser.tab.cpp"
     break;
 
   case 49:
-#line 126 "misc/parser.y"
+#line 127 "misc/parser.y"
            {}
-#line 1738 "parser.tab.cpp"
+#line 1739 "parser.tab.cpp"
     break;
 
   case 50:
-#line 130 "misc/parser.y"
+#line 131 "misc/parser.y"
                  {}
-#line 1744 "parser.tab.cpp"
+#line 1745 "parser.tab.cpp"
     break;
 
   case 51:
-#line 131 "misc/parser.y"
+#line 132 "misc/parser.y"
                   {}
-#line 1750 "parser.tab.cpp"
+#line 1751 "parser.tab.cpp"
     break;
 
   case 52:
-#line 132 "misc/parser.y"
+#line 133 "misc/parser.y"
             {}
-#line 1756 "parser.tab.cpp"
+#line 1757 "parser.tab.cpp"
     break;
 
   case 53:
-#line 133 "misc/parser.y"
+#line 134 "misc/parser.y"
            {}
-#line 1762 "parser.tab.cpp"
+#line 1763 "parser.tab.cpp"
     break;
 
   case 54:
-#line 134 "misc/parser.y"
+#line 135 "misc/parser.y"
         {}
-#line 1768 "parser.tab.cpp"
+#line 1769 "parser.tab.cpp"
     break;
 
   case 55:
-#line 135 "misc/parser.y"
+#line 136 "misc/parser.y"
                                  {}
-#line 1774 "parser.tab.cpp"
+#line 1775 "parser.tab.cpp"
     break;
 
   case 56:
-#line 136 "misc/parser.y"
+#line 137 "misc/parser.y"
                                               {}
-#line 1780 "parser.tab.cpp"
+#line 1781 "parser.tab.cpp"
     break;
 
   case 57:
-#line 137 "misc/parser.y"
+#line 138 "misc/parser.y"
                                              {}
-#line 1786 "parser.tab.cpp"
+#line 1787 "parser.tab.cpp"
     break;
 
   case 58:
-#line 141 "misc/parser.y"
+#line 142 "misc/parser.y"
                 {}
-#line 1792 "parser.tab.cpp"
+#line 1793 "parser.tab.cpp"
     break;
 
   case 59:
-#line 142 "misc/parser.y"
+#line 143 "misc/parser.y"
                   {}
-#line 1798 "parser.tab.cpp"
+#line 1799 "parser.tab.cpp"
     break;
 
   case 60:
-#line 143 "misc/parser.y"
+#line 144 "misc/parser.y"
                   {}
-#line 1804 "parser.tab.cpp"
+#line 1805 "parser.tab.cpp"
     break;
 
   case 61:
-#line 144 "misc/parser.y"
+#line 145 "misc/parser.y"
                   {}
-#line 1810 "parser.tab.cpp"
+#line 1811 "parser.tab.cpp"
     break;
 
   case 62:
-#line 145 "misc/parser.y"
+#line 146 "misc/parser.y"
                   {}
-#line 1816 "parser.tab.cpp"
+#line 1817 "parser.tab.cpp"
     break;
 
   case 63:
-#line 146 "misc/parser.y"
+#line 147 "misc/parser.y"
                   {}
-#line 1822 "parser.tab.cpp"
+#line 1823 "parser.tab.cpp"
     break;
 
   case 64:
-#line 147 "misc/parser.y"
+#line 148 "misc/parser.y"
                   {}
-#line 1828 "parser.tab.cpp"
+#line 1829 "parser.tab.cpp"
     break;
 
   case 65:
-#line 148 "misc/parser.y"
+#line 149 "misc/parser.y"
                   {}
-#line 1834 "parser.tab.cpp"
+#line 1835 "parser.tab.cpp"
     break;
 
   case 66:
-#line 149 "misc/parser.y"
+#line 150 "misc/parser.y"
                   {}
-#line 1840 "parser.tab.cpp"
+#line 1841 "parser.tab.cpp"
     break;
 
   case 67:
-#line 150 "misc/parser.y"
+#line 151 "misc/parser.y"
                   {}
-#line 1846 "parser.tab.cpp"
+#line 1847 "parser.tab.cpp"
     break;
 
   case 68:
-#line 151 "misc/parser.y"
+#line 152 "misc/parser.y"
                    {}
-#line 1852 "parser.tab.cpp"
+#line 1853 "parser.tab.cpp"
     break;
 
   case 69:
-#line 152 "misc/parser.y"
+#line 153 "misc/parser.y"
                    {}
-#line 1858 "parser.tab.cpp"
+#line 1859 "parser.tab.cpp"
     break;
 
   case 70:
-#line 153 "misc/parser.y"
+#line 154 "misc/parser.y"
                    {}
-#line 1864 "parser.tab.cpp"
+#line 1865 "parser.tab.cpp"
     break;
 
   case 71:
-#line 154 "misc/parser.y"
+#line 155 "misc/parser.y"
                    {}
-#line 1870 "parser.tab.cpp"
+#line 1871 "parser.tab.cpp"
     break;
 
   case 72:
-#line 155 "misc/parser.y"
+#line 156 "misc/parser.y"
                   {}
-#line 1876 "parser.tab.cpp"
+#line 1877 "parser.tab.cpp"
     break;
 
   case 73:
-#line 156 "misc/parser.y"
+#line 157 "misc/parser.y"
                   {}
-#line 1882 "parser.tab.cpp"
+#line 1883 "parser.tab.cpp"
     break;
 
   case 74:
-#line 160 "misc/parser.y"
+#line 161 "misc/parser.y"
                     {}
-#line 1888 "parser.tab.cpp"
+#line 1889 "parser.tab.cpp"
     break;
 
   case 75:
-#line 161 "misc/parser.y"
+#line 162 "misc/parser.y"
                        {}
-#line 1894 "parser.tab.cpp"
+#line 1895 "parser.tab.cpp"
     break;
 
   case 76:
-#line 162 "misc/parser.y"
+#line 163 "misc/parser.y"
                      {}
-#line 1900 "parser.tab.cpp"
+#line 1901 "parser.tab.cpp"
     break;
 
 
-#line 1904 "parser.tab.cpp"
+#line 1905 "parser.tab.cpp"
 
       default: break;
     }
@@ -2132,7 +2133,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 170 "misc/parser.y"
+#line 171 "misc/parser.y"
 
 
   int main(int argc, char **argv) {

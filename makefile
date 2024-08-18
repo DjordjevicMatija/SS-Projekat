@@ -22,9 +22,9 @@ lex.yy.cpp: misc/lexer.lex
 	$(FLEX) -o $@ $<
 
 parser_lexer:
-	bison -d -o parser.tab.cpp --defines=parser.tab.hpp misc/parser.y
-	flex -o lex.yy.cpp misc/lexer.lex
-	g++ -o myparser parser.tab.cpp lex.yy.cpp -lfl
+	$(BISON) -d -o parser.tab.cpp --defines=parser.tab.hpp misc/parser.y
+	$(FLEX) -o lex.yy.cpp misc/lexer.lex
+	$(CXX) $(CXXFLAGS) -o myparser parser.tab.cpp lex.yy.cpp -lfl
 
 clean_assembly:
 	rm -f lex.yy.cpp parser.tab.cpp parser.tab.hpp

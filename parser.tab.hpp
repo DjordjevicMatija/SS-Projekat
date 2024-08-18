@@ -48,16 +48,15 @@ extern int yydebug;
 
 #include <stdio.h>
 #include <string.h>
-#include <vector>
-#include <string>
+#include "assembler.hpp"
+
 using namespace std;
 
 extern FILE *yyin;
 int yyerror(const char *p);
 int yylex();
-typedef vector<string*> strVec;
 
-#line 61 "parser.tab.hpp"
+#line 60 "parser.tab.hpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -135,13 +134,15 @@ typedef vector<string*> strVec;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 14 "misc/parser.y"
+#line 13 "misc/parser.y"
 
   int val;
   string* stringType;
-  strVec* stringVector;
+  JumpArgument* jumpArg;
+  DataArguments* dataArgs;
+  DirectiveArguments* directiveArgs;
 
-#line 145 "parser.tab.hpp"
+#line 146 "parser.tab.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
