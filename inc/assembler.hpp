@@ -10,7 +10,8 @@ enum BindingType{
   LOCAL,
   GLOBAL,
   EXTERN,
-  SECTION
+  SECTION,
+  FILE
 };
 
 enum OperandType{
@@ -43,12 +44,12 @@ struct Symbol{
   int index;
   int value;  //offset ili adresa simbola
   BindingType type;
-  char section; //kojoj sekciji pripada
+  string section; //kojoj sekciji pripada, ABS, UNDEF, COMMON
   bool defined;
   ForwardReference* flink;
 
-  Symbol(int location_count, BindingType symType, char symSection, bool isDefined)
-    : value(location_count), type(symType), section(symSection), defined(isDefined) {
+  Symbol(int locationCount, BindingType symType, string symSection, bool isDefined)
+    : value(locationCount), type(symType), section(symSection), defined(isDefined) {
     index = ++ID;
     flink = nullptr;
   }
@@ -81,19 +82,19 @@ struct RelocationEntry{
 struct Section{
   string* name;
   int sectionIndex;
-  int location_counter;
+  int locationCounter;
   int size;
   int startingAddress;
   vector<char>* value;
 
   Section(string name, int sectionIndex)
-    : sectionIndex(sectionIndex), location_counter(0), size(0) {
+    : sectionIndex(sectionIndex), locationCounter(0), size(0) {
     this->name = new string(name);
     value = new vector<char>();
   }
 
   void print(){
-    cout << *name << " section: (" << location_counter << ")" << endl;
+    cout << *name << " section: (" << locationCounter << ")" << endl;
     cout << "Value:" << endl;
     print_hex(*value);
   }
