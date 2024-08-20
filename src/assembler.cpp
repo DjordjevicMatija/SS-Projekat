@@ -6,13 +6,15 @@ using namespace std;
 int Symbol::ID = 0;
 map<int, Section*>* sections = new map<int, Section*>();
 map<string, Symbol*>* symbolTable = new map<string, Symbol*>();
+vector<RelocationEntry*>* relocationTable = new vector<RelocationEntry*>();
+
 Section* currentSection = nullptr;
 int locationCounter = 0;
 
 void asmLabel(string* label){
-  auto iterator = symbolTable->find(*label);
+  auto symbolIterator = symbolTable->find(*label);
   
-  if(iterator == symbolTable->end()){
+  if(symbolIterator == symbolTable->end()){
     //simbol se ne nalazi u tabeli simbola
 
     Symbol* newSym = new Symbol(locationCounter, BindingType::LOCAL, to_string(currentSection->sectionIndex), true);
@@ -21,7 +23,7 @@ void asmLabel(string* label){
   else{
     //simbol se nalazi u tabeli simbola
 
-    auto symbol = iterator->second;
+    auto symbol = symbolIterator->second;
 
     if(symbol->defined){
       //dvostruko definisan simbol
@@ -37,16 +39,157 @@ void asmLabel(string* label){
         symbol->section = to_string(currentSection->sectionIndex);
         symbol->defined = true;
 
-        //relokacioni zapisi
-
-        //backpatching
+        //dopunjavanje relokacionih zapisa za lokalne relokacije
+        for(int i = 0; i < relocationTable->size(); i++){
+          if(!(*relocationTable)[i]->resolved && (*relocationTable)[i]->symbolIndex == symbol->index){
+            (*relocationTable)[i]->symbolIndex = stoi(symbol->section);
+            (*relocationTable)[i]->addend += symbol->value;
+            (*relocationTable)[i]->resolved = true;
+          }
+        }
         
+        //backpatching
+        for(auto forwardRef = symbol->flink; forwardRef != nullptr; forwardRef = forwardRef->nextRef){
+          //symbol->value treba da se upise na sectionIndex->value->patchOffset
+          auto sectionToPatch = sections->find(forwardRef->sectionIndex);
+          if(sectionToPatch != sections->end()){
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset] = (symbol->value & 0xFF);
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 1] = ((symbol->value >> 8) & 0x0F);
+          }
+        }
+
       }
     }
   }
 }
 
+void asmGlobalDir(DirectiveArguments* arguments){
 
+}
+
+void asmExternDir(DirectiveArguments* arguments){
+
+}
+
+void asmSectionDir(string* name){
+
+}
+
+void asmWordDir(DirectiveArguments* arguments){
+
+}
+
+void asmSkipDir(string* literal){
+
+}
+
+void asmEndDir(){
+
+}
+
+void asmHALT(){
+
+}
+
+void asmINT (){
+
+}
+
+void asmIRET(){
+
+}
+
+void asmCALL(JumpArgument* argument){
+
+}
+
+void asmRET (){
+
+}
+
+void asmJMP(JumpArgument* operand){
+
+}
+
+void asmBEQ(string* gpr1, string* gpr2, JumpArgument* argument){
+
+}
+
+void asmBNE(string* gpr1, string* gpr2, JumpArgument* argument){
+
+}
+
+void asmBGT(string* gpr1, string* gpr2, JumpArgument* argument){
+
+}
+
+void asmPUSH(string* gpr){
+
+}
+
+void asmPOP (string* gpr){
+
+}
+
+void asmXCHG(string* gprS, string* gprD){
+
+}
+
+void asmADD(string* gprS, string* gprD){
+
+}
+
+void asmSUB(string* gprS, string* gprD){
+
+}
+
+void asmMUL(string* gprS, string* gprD){
+
+}
+
+void asmDIV(string* gprS, string* gprD){
+
+}
+
+void asmNOT(string* gpr){
+
+}
+
+void asmAND(string* gprS, string* gprD){
+
+}
+
+void asmOR (string* gprS, string* gprD){
+
+}
+
+void asmXOR(string* gprS, string* gprD){
+
+}
+
+void asmSHL(string* gprS, string* gprD){
+
+}
+
+void asmSHR(string* gprS, string* gprD){
+
+}
+
+void asmLD (DataArguments* arguments, string* gpr){
+
+}
+
+void asmST (string* gpr, DataArguments* arguments){
+
+}
+
+void asmCSRRD(string* csr, string* gpr){
+
+}
+
+void asmCSRWR(string* gpr, string* csr){
+  
+}
 
 string output;
 

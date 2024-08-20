@@ -60,7 +60,8 @@ struct Symbol{
 };
 
 struct ForwardReference{
-  int patch;
+  int sectionIndex;
+  int patchOffset;
   ForwardReference* nextRef;
 };
 
@@ -70,9 +71,11 @@ struct RelocationEntry{
   RelocationType relocationType;
   int symbolIndex;  //koji simblol treba da se doda
   int addend;
+  bool resolved;
 
   RelocationEntry(int sectionIndex, int offset, RelocationType relocationType, int symbolIndex, int addend)
-    : sectionIndex(sectionIndex), offset(offset), relocationType(relocationType), symbolIndex(symbolIndex), addend(addend){}
+    : sectionIndex(sectionIndex), offset(offset), relocationType(relocationType),
+      symbolIndex(symbolIndex), addend(addend), resolved(false){}
 
   void print(){
     cout << sectionIndex << " " << offset << " " << relocationType << " " << symbolIndex  << " " << addend << endl;
