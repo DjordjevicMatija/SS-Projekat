@@ -11,12 +11,12 @@ emulator: src/emulator.cpp inc/emulator.hpp | linker
 linker: src/linker.cpp inc/linker.hpp | asembler
 	$(CXX) -o $@ $^
 
-asembler: src/main.cpp src/assembler.cpp inc/assembler.hpp inc/structs.hpp lex.yy.cpp parser.tab.cpp parser.tab.hpp
+asembler: src/assembler.cpp src/util.cpp inc/assembler.hpp inc/util.hpp lex.yy.cpp parser.tab.cpp parser.tab.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	@$(MAKE) clean_assembly
 
 parser.tab.cpp parser.tab.hpp: misc/parser.y
-	$(BISON) -d -o $@--defines=parser.tab.hpp $<
+	$(BISON) -d -o $@ $<
 
 lex.yy.cpp: misc/lexer.lex
 	$(FLEX) -o $@ $<
@@ -27,4 +27,4 @@ parser_lexer:
 	$(CXX) $(CXXFLAGS) -o myparser parser.tab.cpp lex.yy.cpp -lfl
 
 clean_assembly:
-	rm -f lex.yy.cpp parser.tab.cpp parser.tab.hpp
+	rm -f lex.yy.cpp parser.tab.cpp parser.tab.hpp myparser

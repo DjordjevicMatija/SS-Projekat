@@ -110,56 +110,56 @@ instruction:
   ;
 
 symbolList:
-  SYMBOL {$$ = new DirectiveArguments($1, OperandType::SYMBOL);}
-  | symbolList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::SYMBOL); $$ = $1;}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::TYPE_SYMBOL);}
+  | symbolList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_SYMBOL); $$ = $1;}
   ;
 
 symbolOrLiteralList:
-  SYMBOL {$$ = new DirectiveArguments($1, OperandType::SYMBOL);}
-  | LITERAL {$$ = new DirectiveArguments($1, OperandType::LITERAL);}
-  | symbolOrLiteralList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::SYMBOL); $$ = $1;}
-  | symbolOrLiteralList COMMA LITERAL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::LITERAL); $$ = $1;}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::TYPE_SYMBOL);}
+  | LITERAL {$$ = new DirectiveArguments($1, OperandType::TYPE_LITERAL);}
+  | symbolOrLiteralList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_SYMBOL); $$ = $1;}
+  | symbolOrLiteralList COMMA LITERAL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_LITERAL); $$ = $1;}
   ;
 
 jumpOperand:
-  LITERAL {$$ = new JumpArgument($1, OperandType::LITERAL);}
-  | SYMBOL {$$ = new JumpArgument($1, OperandType::SYMBOL);}
+  LITERAL {$$ = new JumpArgument($1, OperandType::TYPE_LITERAL);}
+  | SYMBOL {$$ = new JumpArgument($1, OperandType::TYPE_SYMBOL);}
   ;
 
 dataOperand:
-  DOLLAR LITERAL {$$ = new DataArguments($2, OperandType::LITERAL, AddressType::VALUE_LITERAL);}
-  | DOLLAR SYMBOL {$$ = new DataArguments($2, OperandType::SYMBOL, AddressType::VALUE_SYMBOL);}
-  | LITERAL {$$ = new DataArguments($1, OperandType::LITERAL, AddressType::MEM_LITERAL);}
-  | SYMBOL {$$ = new DataArguments($1, OperandType::SYMBOL, AddressType::MEM_SYMBOL);}
-  | reg {$$ = new DataArguments($1, OperandType::REG, AddressType:VALUE_REG:);}
+  DOLLAR LITERAL {$$ = new DataArguments($2, OperandType::TYPE_LITERAL, AddressType::VALUE_LITERAL);}
+  | DOLLAR SYMBOL {$$ = new DataArguments($2, OperandType::TYPE_SYMBOL, AddressType::VALUE_SYMBOL);}
+  | LITERAL {$$ = new DataArguments($1, OperandType::TYPE_LITERAL, AddressType::MEM_LITERAL);}
+  | SYMBOL {$$ = new DataArguments($1, OperandType::TYPE_SYMBOL, AddressType::MEM_SYMBOL);}
+  | reg {$$ = new DataArguments($1, OperandType::REG, AddressType::VALUE_REG);}
   | LEFTBRACKET reg RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG);}
-  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_LITERAL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::LITERAL);}
-  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_SYMBOL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::SYMBOL);}
+  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_LITERAL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::TYPE_LITERAL);}
+  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_SYMBOL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::TYPE_SYMBOL);}
   ;
 
 gpr:
-  PERCENTAGE R0 {$$ = $2}
-  | PERCENTAGE R1 {$$ = $2}
-  | PERCENTAGE R2 {$$ = $2}
-  | PERCENTAGE R3 {$$ = $2}
-  | PERCENTAGE R4 {$$ = $2}
-  | PERCENTAGE R5 {$$ = $2}
-  | PERCENTAGE R6 {$$ = $2}
-  | PERCENTAGE R7 {$$ = $2}
-  | PERCENTAGE R8 {$$ = $2}
-  | PERCENTAGE R9 {$$ = $2}
-  | PERCENTAGE R10 {$$ = $2}
-  | PERCENTAGE R11 {$$ = $2}
-  | PERCENTAGE R12 {$$ = $2}
-  | PERCENTAGE R13 {$$ = $2}
-  | PERCENTAGE SP {$$ = $2}
-  | PERCENTAGE PC {$$ = $2}
+  PERCENTAGE R0 {$$ = $2;}
+  | PERCENTAGE R1 {$$ = $2;}
+  | PERCENTAGE R2 {$$ = $2;}
+  | PERCENTAGE R3 {$$ = $2;}
+  | PERCENTAGE R4 {$$ = $2;}
+  | PERCENTAGE R5 {$$ = $2;}
+  | PERCENTAGE R6 {$$ = $2;}
+  | PERCENTAGE R7 {$$ = $2;}
+  | PERCENTAGE R8 {$$ = $2;}
+  | PERCENTAGE R9 {$$ = $2;}
+  | PERCENTAGE R10 {$$ = $2;}
+  | PERCENTAGE R11 {$$ = $2;}
+  | PERCENTAGE R12 {$$ = $2;}
+  | PERCENTAGE R13 {$$ = $2;}
+  | PERCENTAGE SP {$$ = $2;}
+  | PERCENTAGE PC {$$ = $2;}
   ;
 
 csr:
-  PERCENTAGE STATUS {$$ = $2}
-  | PERCENTAGE HANDLER {$$ = $2}
-  | PERCENTAGE CAUSE {$$ = $2}
+  PERCENTAGE STATUS {$$ = $2;}
+  | PERCENTAGE HANDLER {$$ = $2;}
+  | PERCENTAGE CAUSE {$$ = $2;}
   ;
 
 reg:

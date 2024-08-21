@@ -23,14 +23,14 @@ using namespace std;
 . {}
 #.* {}
 
-\.[gG][lL][oO][bB][aA][lL] {printf("GLOBALDIR lexer\n"); return GLOBALDIR;}
+\.[gG][lL][oO][bB][aA][lL] {return GLOBALDIR;}
 \.[eE][xX][tT][eE][rR][nN] {return EXTERNDIR;}
-\.[sS][eE][cC][tT][iI][oO][nN] {printf("SECTIONDIR lexer\n"); return SECTIONDIR;}
-\.[wW][oO][rR][dD] {printf("WORDDIR lexer\n"); return WORDDIR;}
-\.[sS][kK][iI][pP] {printf("SKIPDIR lexer\n");return SKIPDIR;}
+\.[sS][eE][cC][tT][iI][oO][nN] {return SECTIONDIR;}
+\.[wW][oO][rR][dD] { return WORDDIR;}
+\.[sS][kK][iI][pP] {return SKIPDIR;}
 \.[aA][sS][cC][iI][iI] {return ASCIIDIR;}
 \.[eE][qQ][uU] {return EQUDIR;}
-\.[eE][nN][dD] {printf("ENDDIR lexer\n");return ENDDIR;}
+\.[eE][nN][dD] {return ENDDIR;}
 
 [hH][aA][lL][tT] {return HALT;}
 [iI][nN][tT] {return INT;}
@@ -44,7 +44,7 @@ using namespace std;
 [pP][uU][sS][hH] {return PUSH;}
 [pP][oO][pP] {return POP;}
 [xX][cC][hH][gG] {return XCHG;}
-[aA][dD][dD] {printf("ADD lexer\n"); return ADD;}
+[aA][dD][dD] {return ADD;}
 [sS][uU][bB] {return SUB;}
 [mM][uU][lL] {return MUL;}
 [dD][iI][vV] {return DIV;}
@@ -79,7 +79,7 @@ using namespace std;
 [hH][aA][nN][dD][lL][eE][rR] {yylval.stringType = new string("HANDLER"); return HANDLER;}
 [cC][aA][uU][sS][eE] {yylval.stringType = new string("CAUSE"); return CAUSE;}
 
-(([-]?[0-9]*\.[0-9]+)|([-]?[0-9]+)|([-]?0x[0-9a-fA-F]+)|([-]?0[0-7]+)) {yylval.stringType = new string(yytext); return LITERAL;}
+(([-]?[0-9]+)|([-]?0x[0-9a-fA-F]+)|([-]?0[0-7]+)) {yylval.stringType = new string(yytext); return LITERAL;}
 [a-zA-Z][a-zA-Z0-9_]* {yylval.stringType = new string(yytext); return SYMBOL;}
 
 %%
