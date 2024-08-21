@@ -152,8 +152,8 @@ gpr:
   | PERCENTAGE R11 {$$ = $2;}
   | PERCENTAGE R12 {$$ = $2;}
   | PERCENTAGE R13 {$$ = $2;}
-  | PERCENTAGE SP {$$ = $2;}
-  | PERCENTAGE PC {$$ = $2;}
+  | PERCENTAGE R14 {$$ = $2;}
+  | PERCENTAGE R15 {$$ = $2;}
   ;
 
 csr:

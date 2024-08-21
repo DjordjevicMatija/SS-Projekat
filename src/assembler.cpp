@@ -97,8 +97,8 @@ void asmLabel(string *label)
           auto sectionToPatch = sections->find(forwardRef->sectionIndex);
           if (sectionToPatch != sections->end())
           {
-            (*(sectionToPatch->second->value))[forwardRef->patchOffset] = (symbol->value & 0xFF);
-            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 1] = ((symbol->value >> 8) & 0x0F);
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset] = (symbol->value & 0xff);
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 1] = ((symbol->value >> 8) & 0x0f);
           }
         }
       }
@@ -217,6 +217,7 @@ void asmSkipDir(string *literal)
   }
   locationCounter += skip;
   currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 
   printSections();
 }
@@ -227,10 +228,27 @@ void asmEndDir()
 
 void asmHALT()
 {
+  for (int i = 0; i < 4; i++)
+  {
+    currentSection->value->push_back((char)0);
+  }
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmINT()
 {
+  currentSection->value->push_back((char)0x10);
+  for (int i = 0; i < 3; i++)
+  {
+    currentSection->value->push_back((char)0);
+  }
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmIRET()
@@ -271,46 +289,166 @@ void asmPOP(string *gpr)
 
 void asmXCHG(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x40);
+  currentSection->value->push_back((char)dstReg);
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmADD(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x50);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmSUB(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x51);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmMUL(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x52);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmDIV(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x53);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmNOT(string *gpr)
 {
+  int reg = stoi((*gpr).substr(1));
+
+  currentSection->value->push_back((char)0x60);
+  currentSection->value->push_back((char)((reg << 4) | reg));
+  currentSection->value->push_back((char)0);
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmAND(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x61);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmOR(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x62);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmXOR(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x63);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmSHL(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x70);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmSHR(string *gprS, string *gprD)
 {
+  int srcReg = stoi((*gprS).substr(1));
+  int dstReg = stoi((*gprD).substr(1));
+
+  currentSection->value->push_back((char)0x71);
+  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)(srcReg << 4));
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmLD(DataArguments *arguments, string *gpr)
@@ -323,10 +461,50 @@ void asmST(string *gpr, DataArguments *arguments)
 
 void asmCSRRD(string *csr, string *gpr)
 {
+  int srcReg;
+  if(*csr == "STATUS"){
+    srcReg = 0;
+  }
+  else if(*csr == "HANDLER"){
+    srcReg = 1;
+  }
+  else{
+    srcReg = 2;
+  }
+  int dstReg = stoi((*gpr).substr(1));
+
+  currentSection->value->push_back((char)0x91);
+  currentSection->value->push_back((char)((dstReg << 4) | srcReg));
+  currentSection->value->push_back((char)0);
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmCSRWR(string *gpr, string *csr)
 {
+  int srcReg = stoi((*gpr).substr(1));
+  int dstReg;
+  if(*csr == "STATUS"){
+    dstReg = 0;
+  }
+  else if(*csr == "HANDLER"){
+    dstReg = 1;
+  }
+  else{
+    dstReg = 2;
+  }
+
+  currentSection->value->push_back((char)0x94);
+  currentSection->value->push_back((char)((dstReg << 4) | srcReg));
+  currentSection->value->push_back((char)0);
+  currentSection->value->push_back((char)0);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 string output;

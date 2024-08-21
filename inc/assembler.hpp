@@ -96,8 +96,8 @@ struct Section
 {
   string *name;
   int sectionIndex;
-  int locationCounter;
-  int size;
+  int locationCounter; // u bajtovima
+  int size; // u bajtovima
   int startingAddress;
   vector<char> *value;
 
