@@ -1,5 +1,6 @@
 #include "assembler.hpp"
 #include <map>
+#include <iomanip>
 
 using namespace std;
 
@@ -79,26 +80,16 @@ void asmLabel(string *label)
         symbol->section = to_string(currentSection->sectionIndex);
         symbol->defined = true;
 
-        // dopunjavanje relokacionih zapisa za lokalne relokacije
-        for (int i = 0; i < relocationTable->size(); i++)
-        {
-          if (!(*relocationTable)[i]->resolved && (*relocationTable)[i]->symbolIndex == symbol->index)
-          {
-            (*relocationTable)[i]->symbolIndex = stoi(symbol->section);
-            (*relocationTable)[i]->addend += symbol->value;
-            (*relocationTable)[i]->resolved = true;
-          }
-        }
-
         // backpatching
         for (auto forwardRef = symbol->flink; forwardRef != nullptr; forwardRef = forwardRef->nextRef)
         {
-          // symbol->value treba da se upise na sectionIndex->value[patchOffset]
+          // PC relativan offset do simbola (u simbol pool-u) uodnosu na instrukciju treba da se upise na sectionIndex->value[patchOffset]
           auto sectionToPatch = sections->find(forwardRef->sectionIndex);
           if (sectionToPatch != sections->end())
           {
-            (*(sectionToPatch->second->value))[forwardRef->patchOffset] = (symbol->value & 0xff);
-            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 1] = ((symbol->value >> 8) & 0x0f);
+            // u sekciju sectionToPatch->symbolPool dodaj symbol->index i patchOffset
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 2] = ((symbol->value >> 8) & 0x0f);
+            (*(sectionToPatch->second->value))[forwardRef->patchOffset + 3] = (symbol->value & 0xff);
           }
         }
       }
@@ -224,6 +215,9 @@ void asmSkipDir(string *literal)
 
 void asmEndDir()
 {
+  cout << "asmEndDir start" << endl;
+  printSymbolTable();
+  printSections();
 }
 
 void asmHALT()
@@ -253,6 +247,23 @@ void asmINT()
 
 void asmIRET()
 {
+  // uvecavamo SP za 8
+  currentSection->value->push_back((char)0x91);
+  currentSection->value->push_back((char)((14 << 4) | 14));
+  currentSection->value->push_back((char)0);
+  currentSection->value->push_back((char)8);
+
+  // pop STATUS
+  currentSection->value->push_back((char)0x96);
+  currentSection->value->push_back((char)14);
+  currentSection->value->push_back((char)((-4 >> 8) & 0x0f));
+  currentSection->value->push_back((char)(-4 & 0xff));
+
+  // pop PC
+  currentSection->value->push_back((char)0x96);
+  currentSection->value->push_back((char)((15 << 4) | 14));
+  currentSection->value->push_back((char)((-8 >> 8) & 0x0f));
+  currentSection->value->push_back((char)(-8 & 0xff));
 }
 
 void asmCALL(JumpArgument *argument)
@@ -261,6 +272,8 @@ void asmCALL(JumpArgument *argument)
 
 void asmRET()
 {
+  string pc = "R15";
+  asmPOP(&pc);
 }
 
 void asmJMP(JumpArgument *operand)
@@ -281,10 +294,30 @@ void asmBGT(string *gpr1, string *gpr2, JumpArgument *argument)
 
 void asmPUSH(string *gpr)
 {
+  int reg = stoi((*gpr).substr(1));
+
+  currentSection->value->push_back((char)0x81);
+  currentSection->value->push_back((char)(14 << 4));
+  currentSection->value->push_back((char)((reg << 4) | ((-4 >> 8) & 0x0f)));
+  currentSection->value->push_back((char)(-4 & 0xff));
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmPOP(string *gpr)
 {
+  int reg = stoi((*gpr).substr(1));
+
+  currentSection->value->push_back((char)0x93);
+  currentSection->value->push_back((char)((reg << 4) | 14));
+  currentSection->value->push_back((char)0);
+  currentSection->value->push_back((char)4);
+
+  locationCounter += 4;
+  currentSection->locationCounter = locationCounter;
+  currentSection->size = locationCounter;
 }
 
 void asmXCHG(string *gprS, string *gprD)
@@ -427,7 +460,7 @@ void asmSHL(string *gprS, string *gprD)
   int dstReg = stoi((*gprD).substr(1));
 
   currentSection->value->push_back((char)0x70);
-  currentSection->value->push_back((char)((dstReg << 4) | dstReg));
+  currentSection->value->push_back((char)((dstReg << 4) | (dstReg & 0xf)));
   currentSection->value->push_back((char)(srcReg << 4));
   currentSection->value->push_back((char)0);
 
@@ -462,18 +495,21 @@ void asmST(string *gpr, DataArguments *arguments)
 void asmCSRRD(string *csr, string *gpr)
 {
   int srcReg;
-  if(*csr == "STATUS"){
+  if ((*csr).compare("STATUS") == 0)
+  {
     srcReg = 0;
   }
-  else if(*csr == "HANDLER"){
+  else if ((*csr).compare("HANDLER") == 0)
+  {
     srcReg = 1;
   }
-  else{
+  else
+  {
     srcReg = 2;
   }
   int dstReg = stoi((*gpr).substr(1));
 
-  currentSection->value->push_back((char)0x91);
+  currentSection->value->push_back((char)0x90);
   currentSection->value->push_back((char)((dstReg << 4) | srcReg));
   currentSection->value->push_back((char)0);
   currentSection->value->push_back((char)0);
@@ -487,13 +523,16 @@ void asmCSRWR(string *gpr, string *csr)
 {
   int srcReg = stoi((*gpr).substr(1));
   int dstReg;
-  if(*csr == "STATUS"){
+  if (*csr == "STATUS")
+  {
     dstReg = 0;
   }
-  else if(*csr == "HANDLER"){
+  else if (*csr == "HANDLER")
+  {
     dstReg = 1;
   }
-  else{
+  else
+  {
     dstReg = 2;
   }
 

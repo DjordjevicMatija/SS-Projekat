@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <map>
 #include <iostream>
 
 using namespace std;
@@ -36,16 +37,13 @@ enum AddressType
 
 enum RelocationType
 {
-  GLOBAL_ABSOLUTE,
-  GLOBAL_RELATIVE,
-  LOCAL_ABSOLUTE,
-  LOCAL_RELATIVE
+  ABSOLUTE
 };
 
 struct ForwardReference
 {
   int sectionIndex;
-  int patchOffset;
+  int patchOffset; // pocetak instrukcije
   ForwardReference *nextRef;
 };
 

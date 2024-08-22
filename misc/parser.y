@@ -36,8 +36,8 @@ int yylex();
 %token <stringType> R11
 %token <stringType> R12
 %token <stringType> R13
-%token <stringType> SP
-%token <stringType> PC
+%token <stringType> R14
+%token <stringType> R15
 %token <stringType> STATUS
 %token <stringType> HANDLER
 %token <stringType> CAUSE
