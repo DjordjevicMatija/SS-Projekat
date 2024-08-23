@@ -1,5 +1,5 @@
+.extern h1
 .global main
-.extern test
 .section text
 .skip 0x10
 main:

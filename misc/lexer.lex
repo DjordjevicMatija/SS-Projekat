@@ -10,7 +10,6 @@ using namespace std;
 %option noyywrap
 
 %%
-\* {return STAR;}
 ":" {return COLON;}
 "+" {return PLUS;}
 "[" {return LEFTBRACKET;}
@@ -18,10 +17,7 @@ using namespace std;
 "%" {return PERCENTAGE;}
 "$" {return DOLLAR;}
 , {return COMMA;}
-[ \t] {}
-\n {return EOL;}
-. {}
-#.* {}
+#[^\n\r] {}
 
 \.[gG][lL][oO][bB][aA][lL] {return GLOBALDIR;}
 \.[eE][xX][tT][eE][rR][nN] {return EXTERNDIR;}
@@ -75,11 +71,18 @@ using namespace std;
 [rR]13 {yylval.stringType = new string("R13"); return R13;}
 ([rR]14|[sS][pP]) {yylval.stringType = new string("R14"); return R14;}
 ([rR]15|[pP][cC]) {yylval.stringType = new string("R15"); return R15;}
-[sS][tT][aA][tT][uU][sS] {yylval.stringType = new string("STATUS"); return STATUS;}
-[hH][aA][nN][dD][lL][eE][rR] {yylval.stringType = new string("HANDLER"); return HANDLER;}
-[cC][aA][uU][sS][eE] {yylval.stringType = new string("CAUSE"); return CAUSE;}
+%[sS][tT][aA][tT][uU][sS] {yylval.stringType = new string("STATUS"); return STATUS;}
+%[hH][aA][nN][dD][lL][eE][rR] {yylval.stringType = new string("HANDLER"); return HANDLER;}
+%[cC][aA][uU][sS][eE] {yylval.stringType = new string("CAUSE"); return CAUSE;}
 
-(([-]?[0-9]+)|([-]?0x[0-9a-fA-F]+)|([-]?0[0-7]+)) {yylval.stringType = new string(yytext); return LITERAL;}
+0b[0-1]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
+(0|([1-9][0-9]*)) {yylval.stringType = new std::string(yytext); return LITERAL; }
+0x[0-9a-fA-F]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
+0[0-7]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
 [a-zA-Z][a-zA-Z0-9_]* {yylval.stringType = new string(yytext); return SYMBOL;}
+
+[ \t\r]* {}
+\n {return EOL;}
+. {}
 
 %%
