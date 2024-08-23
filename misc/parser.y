@@ -18,7 +18,7 @@ int yylex();
   DirectiveArguments* directiveArgs;
 }
 
-%token STAR COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
+%token COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
 %token GLOBALDIR EXTERNDIR SECTIONDIR WORDDIR SKIPDIR ASCIIDIR EQUDIR ENDDIR
 %token HALT INT IRET CALL RET JMP BEQ BNE BGT PUSH POP XCHG ADD SUB MUL DIV NOT AND OR XOR SHL SHR LD ST CSRRD CSRWR
 
@@ -56,15 +56,16 @@ int yylex();
 %%
 
 program:
-  | program statement EOL
+  | program statement
   ;
 
 statement:
-  label 
-  | label directive
-  | label instruction
-  | directive
-  | instruction
+  EOL {}
+  | label {}
+  | label directive {}
+  | label instruction {}
+  | directive {}
+  | instruction {}
   ;
 
 label:
@@ -157,9 +158,9 @@ gpr:
   ;
 
 csr:
-  PERCENTAGE STATUS {$$ = $2;}
-  | PERCENTAGE HANDLER {$$ = $2;}
-  | PERCENTAGE CAUSE {$$ = $2;}
+  STATUS {$$ = $1;}
+  | HANDLER {$$ = $1;}
+  | CAUSE {$$ = $1;}
   ;
 
 reg:

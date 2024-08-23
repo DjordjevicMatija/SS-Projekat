@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -67,7 +68,7 @@ struct Symbol
 
   void print()
   {
-    cout << index << ": " << value << " " << type << " " << section << " " << defined << " ";
+    cout << index << ": " << hex << value << dec << " " << type << " " << section << " " << defined << " ";
   }
 };
 
@@ -86,7 +87,7 @@ struct RelocationEntry
 
   void print()
   {
-    cout << sectionIndex << " " << offset << " " << relocationType << " " << symbolIndex << " " << addend << endl;
+    cout << sectionIndex << " " << hex << offset << dec << " " << relocationType << " " << symbolIndex << " " << addend << endl;
   }
 };
 
@@ -95,7 +96,7 @@ struct Section
   string *name;
   int sectionIndex;
   int locationCounter; // u bajtovima
-  int size; // u bajtovima
+  int size;            // u bajtovima
   int startingAddress;
   vector<char> *value;
 
