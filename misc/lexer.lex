@@ -9,6 +9,11 @@ using namespace std;
 
 %option noyywrap
 
+DECIMAL (([1-9][0-9]*) | 0)
+HEXADECIMAL 0x[0-9a-fA-F]+
+OCTAL 0[0-7]+
+BINARY 0b[0-1]+
+
 %%
 ":" {return COLON;}
 "+" {return PLUS;}
