@@ -245,7 +245,9 @@ void asmEndDir()
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
         int displacement = section->locationCounter - offset;
-
+        cout << "Symbol pool displacement: " << displacement << endl;
+        cout << "Symbol pool offset: " << offset << endl;
+        cout << "Symbol pool LC: " << section->locationCounter << endl;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
@@ -462,36 +464,39 @@ void asmLD(DataArguments *arguments, string *gpr)
     if (value <= 2047 && value >= -2048)
     {
       // literal moze da stane u 12b
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x91, reg << 4, (value >> 8) & 0x0f, value & 0xff);
     }
     else
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, 0x91, reg << 4, 0, 0);
+      writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     }
     break;
   case AddressType::VALUE_SYMBOL:
+    cout << "VALUE_SYMBOL LC: " << currentSection->locationCounter << endl;
     checkSymbolExistence(firstOperand);
-    writeToSection(currentSection, 0x91, reg << 4, 0, 0);
+    writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     break;
   case AddressType::MEM_LITERAL:
     value = literalToValue(firstOperand);
     if (value <= 2047 && value >= -2048)
     {
       // literal moze da stane u 12b
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x92, reg << 4, (value >> 8) & 0x0f, value & 0xff);
     }
     else
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, 0x92, reg << 4, 0, 0);
+      writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     }
     break;
   case AddressType::MEM_SYMBOL:
     checkSymbolExistence(firstOperand);
-    writeToSection(currentSection, 0x92, reg << 4, 0, 0);
+    writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     break;
   case AddressType::VALUE_REG:
     regOperand = stoi((*firstOperand).substr(1));
@@ -506,6 +511,7 @@ void asmLD(DataArguments *arguments, string *gpr)
     value = literalToValue(secondOperand);
     if (value <= 2047 && value >= -2048)
     {
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x92, (reg << 4) | regOperand, (value >> 8) & 0x0f, value & 0xff);
     }
     else
@@ -519,6 +525,7 @@ void asmLD(DataArguments *arguments, string *gpr)
     value = symbolToValue(secondOperand);
     if (value <= 2047 && value >= -2048)
     {
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x92, (reg << 4) | regOperand, (value >> 8) & 0x0f, value & 0xff);
     }
     else
@@ -556,18 +563,19 @@ void asmST(string *gpr, DataArguments *arguments)
     if (value <= 2047 && value >= -2048)
     {
       // literal moze da stane u 12b
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x80, 0, (reg << 4) | ((value >> 8) & 0x0f), value & 0xff);
     }
     else
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, 0x80, 0, reg << 4, 0);
+      writeToSection(currentSection, 0x82, 15, reg << 4, 0);
     }
     break;
   case AddressType::MEM_SYMBOL:
     checkSymbolExistence(firstOperand);
-    writeToSection(currentSection, 0x80, 0, reg << 4, 0);
+    writeToSection(currentSection, 0x82, 15, reg << 4, 0);
     break;
   case AddressType::MEM_REG:
     regOperand = stoi((*firstOperand).substr(1));
@@ -578,6 +586,7 @@ void asmST(string *gpr, DataArguments *arguments)
     value = literalToValue(secondOperand);
     if (value <= 2047 && value >= -2048)
     {
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x80, regOperand << 4, (reg << 4) | ((value >> 8) & 0x0f), value & 0xff);
     }
     else
@@ -591,6 +600,7 @@ void asmST(string *gpr, DataArguments *arguments)
     value = symbolToValue(secondOperand);
     if (value <= 2047 && value >= -2048)
     {
+      value = toSigned12b(value);
       writeToSection(currentSection, 0x80, regOperand << 4, (reg << 4) | ((value >> 8) & 0x0f), value & 0xff);
     }
     else
@@ -705,13 +715,10 @@ void addToPool(map<int, vector<int>> *pool, int index, int offset)
   if (item == pool->end())
   {
     // vrednost ne postoji u pool-u
-    (*pool)[index] = vector<int>(offset);
+    (*pool)[index] = vector<int>();
   }
-  else
-  {
-    // vrednost postoji u pool-u
-    item->second.push_back(offset);
-  }
+  // vrednost postoji u pool-u
+  ((*pool)[index]).push_back(offset);
 }
 
 void writeToSection(Section *section, int firstByte, int secondByte, int thirdByte, int fourthByte)
@@ -736,19 +743,20 @@ void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2)
     if (value <= 2047 && value >= -2048)
     {
       // literal moze da stane u 12b
+      value = toSigned12b(value);
       writeToSection(currentSection, code, reg1, (reg2 << 4) | ((value >> 8) & 0x0f), value & 0xff);
     }
     else
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, code, reg1, reg2 << 4, 0);
+      writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
     }
   }
   else if (operandType == OperandType::TYPE_SYMBOL)
   {
     checkSymbolExistence(operand);
-    writeToSection(currentSection, code, reg1, reg2 << 4, 0);
+    writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
   }
 }
 
@@ -765,6 +773,7 @@ int literalToValue(string *literal)
     base = 8;
   }
 
+  cout << "pre conversion LITERAL: " << *literal << endl;
   int value = stoul(*literal, nullptr, base);
   return value;
 }
@@ -826,6 +835,15 @@ int symbolToValue(string *symbolName)
     }
     return symbol->value;
   }
+}
+
+int toSigned12b(int value)
+{
+  if (value < 0)
+  {
+    value += 0x1000;
+  }
+  return value & 0xFFF;
 }
 
 string output;

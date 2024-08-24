@@ -216,3 +216,4 @@ void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2)
 int literalToValue(string *literal);
 void checkSymbolExistence(string* symbol);
 int symbolToValue(string* symbolName);
+int toSigned12b(int value);
