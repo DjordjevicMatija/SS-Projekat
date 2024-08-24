@@ -1,4 +1,6 @@
-.extern handler
+# file: main.s
+
+.extern handler, mathAdd, mathSub, mathMul, mathDiv
 
 .global my_start
 
@@ -36,13 +38,13 @@ my_start:
   ld %r2, %r1
   ld [%r2], %r1
   ld [%r2 + 4], %r1
-  ld [%r2 + banger], %r1
+#  ld [%r2 + my_start], %r1
 
   st %r1, 0xF0000000
   st %r1, banger
   st %r1, [%r2]
   st %r1, [%r2 + 4]
-  st %r1, [%r2 + banger]
+#  st %r1, [%r2 + my_start]
 
 
   halt
@@ -51,17 +53,17 @@ my_start:
 .section my_data
 
 banger:
-.skip 1
+.skip 4
 value1:
-.word 1
-value2:
 .word 0
+value2:
+.word banger
 value3:
 .word 0
 value4:
 .word 0
 value5:
-.word 0
+.word banger
 value6:
 .word 0
 value7:

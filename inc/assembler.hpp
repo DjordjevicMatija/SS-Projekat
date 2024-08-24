@@ -6,7 +6,7 @@
 
 using namespace std;
 
-extern void print_hex(const vector<char> &value);
+extern void print_hex(const vector<char>& value, ostream& out);
 
 enum BindingType
 {
@@ -46,6 +46,10 @@ struct ForwardReference
   int sectionIndex;
   int patchOffset; // pocetak instrukcije
   ForwardReference *nextRef;
+  bool isWordDir;
+
+  ForwardReference(int secInd, int offset, bool wordDir)
+      : sectionIndex(secInd), patchOffset(offset), nextRef(nullptr), isWordDir(wordDir) {}
 };
 
 struct Symbol
@@ -66,9 +70,9 @@ struct Symbol
     flink = nullptr;
   }
 
-  void print()
+  void print(ostream& out)
   {
-    cout << index << ": " << hex << value << dec << " " << type << " " << section << " " << defined << " ";
+    out << index << ": " << hex << value << dec << " " << type << " " << section << " " << defined << " ";
   }
 };
 
@@ -78,16 +82,15 @@ struct RelocationEntry
   int offset; // offset u odnosu na sekciju
   RelocationType relocationType;
   int symbolIndex; // koji simblol treba da se doda
-  int addend;
   bool resolved;
 
-  RelocationEntry(int sectionIndex, int offset, RelocationType relocationType, int symbolIndex, int addend)
+  RelocationEntry(int sectionIndex, int offset, RelocationType relocationType, int symbolIndex)
       : sectionIndex(sectionIndex), offset(offset), relocationType(relocationType),
-        symbolIndex(symbolIndex), addend(addend), resolved(false) {}
+        symbolIndex(symbolIndex), resolved(false) {}
 
-  void print()
+  void print(ostream& out)
   {
-    cout << sectionIndex << " " << hex << offset << dec << " " << relocationType << " " << symbolIndex << " " << addend << endl;
+    out << sectionIndex << " " << hex << offset << dec << " " << relocationType << " " << symbolIndex << endl;
   }
 };
 
@@ -99,19 +102,23 @@ struct Section
   int size;            // u bajtovima
   int startingAddress;
   vector<char> *value;
+  map<int, vector<int>> *symbolPool;  //<index, vectro<offset>>
+  map<int, vector<int>> *literalPool; //<value,
 
   Section(string name, int sectionIndex)
       : sectionIndex(sectionIndex), locationCounter(0), size(0)
   {
     this->name = new string(name);
     value = new vector<char>();
+    symbolPool = new map<int, vector<int>>();
+    literalPool = new map<int, vector<int>>();
   }
 
-  void print()
+  void print(ostream& out)
   {
-    cout << sectionIndex << ": " << *name << " section: (LC = " << locationCounter << ")" << endl;
-    cout << "Value:" << endl;
-    print_hex(*value);
+    out << sectionIndex << ": " << *name << " section: (LC = " << locationCounter << ")" << endl;
+    out << "Value:" << endl;
+    print_hex(*value, out);
   }
 };
 
@@ -195,3 +202,17 @@ void asmLD(DataArguments *arguments, string *gpr);
 void asmST(string *gpr, DataArguments *arguments);
 void asmCSRRD(string *csr, string *gpr);
 void asmCSRWR(string *gpr, string *csr);
+
+void printSymbolTable(ostream& out);
+void printSections(ostream& out);
+void printRelocationTable(ostream& out);
+void writeToOutput(const string& output);
+
+void backpatch(Symbol *symbol);
+void addToPool(map<int, vector<int>> *pool, int index, int offset);
+void writeToSection(Section *section, int firstByte, int secondByte, int thirdByte, int fourthByte);
+
+void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2);
+int literalToValue(string *literal);
+void checkSymbolExistence(string* symbol);
+int symbolToValue(string* symbolName);

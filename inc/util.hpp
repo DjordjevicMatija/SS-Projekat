@@ -1,3 +1,6 @@
 #include <vector>
+#include <fstream>
 
-void print_hex(const std::vector<char>& value);
+using namespace std;
+
+void print_hex(const vector<char>& value, ostream& out);

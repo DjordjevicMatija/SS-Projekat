@@ -178,7 +178,7 @@ reg:
   }
 
   if(fp == NULL){
-    perror("Failed to open file.");
+    perror("Failed to open input file.");
     return -1;
   }
   else{
@@ -191,11 +191,11 @@ reg:
     fclose(fp);
   }
 
-  return 0;
+  return 1;
 
 }
 
 int yyerror(const char *p) {
     fprintf(stderr, "Error: %s\n", p);
-    return 0;
+    return -1;
 }

@@ -9,12 +9,8 @@ using namespace std;
 
 %option noyywrap
 
-DECIMAL (([1-9][0-9]*) | 0)
-HEXADECIMAL 0x[0-9a-fA-F]+
-OCTAL 0[0-7]+
-BINARY 0b[0-1]+
-
 %%
+#[^\n\r]* {}
 ":" {return COLON;}
 "+" {return PLUS;}
 "[" {return LEFTBRACKET;}
@@ -22,7 +18,6 @@ BINARY 0b[0-1]+
 "%" {return PERCENTAGE;}
 "$" {return DOLLAR;}
 , {return COMMA;}
-#[^\n\r] {}
 
 \.[gG][lL][oO][bB][aA][lL] {return GLOBALDIR;}
 \.[eE][xX][tT][eE][rR][nN] {return EXTERNDIR;}
@@ -81,9 +76,9 @@ BINARY 0b[0-1]+
 %[cC][aA][uU][sS][eE] {yylval.stringType = new string("CAUSE"); return CAUSE;}
 
 0b[0-1]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
+0[0-7]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
 (0|([1-9][0-9]*)) {yylval.stringType = new std::string(yytext); return LITERAL; }
 0x[0-9a-fA-F]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
-0[0-7]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
 [a-zA-Z][a-zA-Z0-9_]* {yylval.stringType = new string(yytext); return SYMBOL;}
 
 [ \t\r]* {}
