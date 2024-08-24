@@ -1,8 +1,8 @@
-%code requires {
-int yylex(); 
-
+%code requires{
 #include <stdio.h>
 #include <string.h>
+#include "assembler.hpp"
+
 using namespace std;
 
 extern FILE *yyin;
@@ -10,9 +10,17 @@ int yyerror(const char *p);
 int yylex();
 }
 
-%token STAR COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
+%union{
+  int val;
+  string* stringType;
+  JumpArgument* jumpArg;
+  DataArguments* dataArgs;
+  DirectiveArguments* directiveArgs;
+}
+
+%token COLON PLUS LEFTBRACKET RIGHTBRACKET PERCENTAGE DOLLAR COMMA EOL
 %token GLOBALDIR EXTERNDIR SECTIONDIR WORDDIR SKIPDIR ASCIIDIR EQUDIR ENDDIR
-%token HALT INT IRET CALL RET JMP BEQ BNE BGT PUSH POP XCHG ADD SUB MUL DIV NOT AND OR XOR SHL SHR LD ST
+%token HALT INT IRET CALL RET JMP BEQ BNE BGT PUSH POP XCHG ADD SUB MUL DIV NOT AND OR XOR SHL SHR LD ST CSRRD CSRWR
 
 %token <stringType> R0 
 %token <stringType> R1 
@@ -28,8 +36,8 @@ int yylex();
 %token <stringType> R11
 %token <stringType> R12
 %token <stringType> R13
-%token <stringType> SP
-%token <stringType> PC
+%token <stringType> R14
+%token <stringType> R15
 %token <stringType> STATUS
 %token <stringType> HANDLER
 %token <stringType> CAUSE
@@ -37,145 +45,122 @@ int yylex();
 %token <stringType> SYMBOL
 %token <stringType> LITERAL
 
-%type <stringVector> symbolList
-%type <stringVector> symbolOrLiteralList
-%type <stringType> jumpOperand
-%type <stringVector> dataOperand
+%type <directiveArgs> symbolList
+%type <directiveArgs> symbolOrLiteralList
+%type <jumpArg> jumpOperand
+%type <dataArgs> dataOperand
 %type <stringType> gpr
 %type <stringType> csr
 %type <stringType> reg
 
+%%
+
 program:
-  | program statement EOL
+  | program statement
   ;
 
 statement:
-  label 
-
-  | label GLOBALDIR symbolList {}
-  | label EXTERNDIR symbolList {}
-  | label SECTIONDIR SYMBOL {}
-  | label WORDDIR symbolOrLiteralList {}
-  | label SKIPDIR LITERAL {}
-  | label ENDDIR {return -1;}
-
-  | GLOBALDIR symbolList {}
-  | EXTERNDIR symbolList {}
-  | SECTIONDIR SYMBOL {}
-  | WORDDIR symbolOrLiteralList {}
-  | SKIPDIR LITERAL {}
-  | ENDDIR {return -1;}
-
-  | label HALT {}
-  | label INT {}
-  | label IRET {}
-  | label CALL jumpOperand {}
-  | label RET {}
-  | label JMP jumpOperand {}
-  | label BEQ gpr COMMA gpr COMMA jumpOperand {}
-  | label BNE gpr COMMA gpr COMMA jumpOperand {}
-  | label BGT gpr COMMA gpr COMMA jumpOperand {}
-  | label PUSH gpr {}
-  | label POP gpr {}
-  | label XCHG gpr COMMA gpr {}
-  | label ADD gpr COMMA gpr {}
-  | label SUB gpr COMMA gpr {}
-  | label MUL gpr COMMA gpr {}
-  | label DIV gpr COMMA gpr {}
-  | label NOT gpr {}
-  | label AND gpr COMMA gpr {}
-  | label OR gpr COMMA gpr {}
-  | label XOR gpr COMMA gpr {}
-  | label SHL gpr COMMA gpr {}
-  | label SHR gpr COMMA gpr {}
-  | label LD dataOperand COMMA gpr {}
-  | label ST gpr COMMA dataOperand {}
-  | label CSRRD csr COMMA gpr {}
-  | label CSRWR gpr COMMA csr {}
-
-  | HALT {}
-  | INT {}
-  | IRET {}
-  | CALL jumpOperand {}
-  | RET {}
-  | JMP jumpOperand {}
-  | BEQ gpr COMMA gpr COMMA jumpOperand {}
-  | BNE gpr COMMA gpr COMMA jumpOperand {}
-  | BGT gpr COMMA gpr COMMA jumpOperand {}
-  | PUSH gpr {}
-  | POP gpr {}
-  | XCHG gpr COMMA gpr {}
-  | ADD gpr COMMA gpr {}
-  | SUB gpr COMMA gpr {}
-  | MUL gpr COMMA gpr {}
-  | DIV gpr COMMA gpr {}
-  | NOT gpr {}
-  | AND gpr COMMA gpr {}
-  | OR gpr COMMA gpr {}
-  | XOR gpr COMMA gpr {}
-  | SHL gpr COMMA gpr {}
-  | SHR gpr COMMA gpr {}
-  | LD dataOperand COMMA gpr {}
-  | ST gpr COMMA dataOperand {}
-  | CSRRD csr COMMA gpr {}
-  | CSRWR gpr COMMA csr {}
+  EOL {}
+  | label {}
+  | label directive {}
+  | label instruction {}
+  | directive {}
+  | instruction {}
   ;
 
 label:
-  SYMBOL COLON {}
+  SYMBOL COLON {asmLabel($1);}
+  ;
+
+directive:
+  GLOBALDIR symbolList {asmGlobalDir($2);}
+  | EXTERNDIR symbolList {asmExternDir($2);}
+  | SECTIONDIR SYMBOL {asmSectionDir($2);}
+  | WORDDIR symbolOrLiteralList {asmWordDir($2);}
+  | SKIPDIR LITERAL {asmSkipDir($2);}
+  | ENDDIR {asmEndDir(); return -1;}
+  ;
+
+instruction:
+  HALT {asmHALT();}
+  | INT {asmINT ();}
+  | IRET {asmIRET();}
+  | CALL jumpOperand {asmCALL($2);}
+  | RET {asmRET ();}
+  | JMP jumpOperand {asmJMP($2);}
+  | BEQ gpr COMMA gpr COMMA jumpOperand {asmBEQ($2, $4, $6);}
+  | BNE gpr COMMA gpr COMMA jumpOperand {asmBNE($2, $4, $6);}
+  | BGT gpr COMMA gpr COMMA jumpOperand {asmBGT($2, $4, $6);}
+  | PUSH gpr {asmPUSH($2);}
+  | POP gpr {asmPOP($2);}
+  | XCHG gpr COMMA gpr {asmXCHG($2, $4);}
+  | ADD gpr COMMA gpr {asmADD($2, $4);}
+  | SUB gpr COMMA gpr {asmSUB($2, $4);}
+  | MUL gpr COMMA gpr {asmMUL($2, $4);}
+  | DIV gpr COMMA gpr {asmDIV($2, $4);}
+  | NOT gpr {asmNOT($2);}
+  | AND gpr COMMA gpr {asmAND($2, $4);}
+  | OR gpr COMMA gpr {asmOR($2, $4);}
+  | XOR gpr COMMA gpr {asmXOR($2, $4);}
+  | SHL gpr COMMA gpr {asmSHL($2, $4);}
+  | SHR gpr COMMA gpr {asmSHR($2, $4);}
+  | LD dataOperand COMMA gpr {asmLD($2, $4);}
+  | ST gpr COMMA dataOperand {asmST($2, $4);}
+  | CSRRD csr COMMA gpr {asmCSRRD($2, $4);}
+  | CSRWR gpr COMMA csr {asmCSRWR($2, $4);}
   ;
 
 symbolList:
-  SYMBOL {}
-  | symbolList COMMA SYMBOL {}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::TYPE_SYMBOL);}
+  | symbolList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_SYMBOL); $$ = $1;}
   ;
 
 symbolOrLiteralList:
-  SYMBOL {}
-  | LITERAL {}
-  | symbolOrLiteralList COMMA SYMBOL {}
-  | symbolOrLiteralList COMMA LITERAL {}
+  SYMBOL {$$ = new DirectiveArguments($1, OperandType::TYPE_SYMBOL);}
+  | LITERAL {$$ = new DirectiveArguments($1, OperandType::TYPE_LITERAL);}
+  | symbolOrLiteralList COMMA SYMBOL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_SYMBOL); $$ = $1;}
+  | symbolOrLiteralList COMMA LITERAL {$1->operand->push_back($3); $1->operandType->push_back(OperandType::TYPE_LITERAL); $$ = $1;}
   ;
 
 jumpOperand:
-  LITERAL {}
-  | SYMBOL {}
+  LITERAL {$$ = new JumpArgument($1, OperandType::TYPE_LITERAL);}
+  | SYMBOL {$$ = new JumpArgument($1, OperandType::TYPE_SYMBOL);}
   ;
 
 dataOperand:
-  DOLLAR LITERAL {}
-  | DOLLAR SYMBOL {}
-  | LITERAL {}
-  | SYMBOL {}
-  | reg {}
-  | LEFTBRACKET reg RIGHTBRACKET
-  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET
-  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET
+  DOLLAR LITERAL {$$ = new DataArguments($2, OperandType::TYPE_LITERAL, AddressType::VALUE_LITERAL);}
+  | DOLLAR SYMBOL {$$ = new DataArguments($2, OperandType::TYPE_SYMBOL, AddressType::VALUE_SYMBOL);}
+  | LITERAL {$$ = new DataArguments($1, OperandType::TYPE_LITERAL, AddressType::MEM_LITERAL);}
+  | SYMBOL {$$ = new DataArguments($1, OperandType::TYPE_SYMBOL, AddressType::MEM_SYMBOL);}
+  | reg {$$ = new DataArguments($1, OperandType::REG, AddressType::VALUE_REG);}
+  | LEFTBRACKET reg RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG);}
+  | LEFTBRACKET reg PLUS LITERAL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_LITERAL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::TYPE_LITERAL);}
+  | LEFTBRACKET reg PLUS SYMBOL RIGHTBRACKET {$$ = new DataArguments($2, OperandType::REG, AddressType::MEM_REG_SYMBOL); $$->operand->push_back($4); $$->operandType->push_back(OperandType::TYPE_SYMBOL);}
   ;
 
 gpr:
-  PERCENTAGE R0 {}
-  | PERCENTAGE R1 {}
-  | PERCENTAGE R2 {}
-  | PERCENTAGE R3 {}
-  | PERCENTAGE R4 {}
-  | PERCENTAGE R5 {}
-  | PERCENTAGE R6 {}
-  | PERCENTAGE R7 {}
-  | PERCENTAGE R8 {}
-  | PERCENTAGE R9 {}
-  | PERCENTAGE R10 {}
-  | PERCENTAGE R11 {}
-  | PERCENTAGE R12 {}
-  | PERCENTAGE R13 {}
-  | PERCENTAGE SP {}
-  | PERCENTAGE PC {}
+  PERCENTAGE R0 {$$ = $2;}
+  | PERCENTAGE R1 {$$ = $2;}
+  | PERCENTAGE R2 {$$ = $2;}
+  | PERCENTAGE R3 {$$ = $2;}
+  | PERCENTAGE R4 {$$ = $2;}
+  | PERCENTAGE R5 {$$ = $2;}
+  | PERCENTAGE R6 {$$ = $2;}
+  | PERCENTAGE R7 {$$ = $2;}
+  | PERCENTAGE R8 {$$ = $2;}
+  | PERCENTAGE R9 {$$ = $2;}
+  | PERCENTAGE R10 {$$ = $2;}
+  | PERCENTAGE R11 {$$ = $2;}
+  | PERCENTAGE R12 {$$ = $2;}
+  | PERCENTAGE R13 {$$ = $2;}
+  | PERCENTAGE R14 {$$ = $2;}
+  | PERCENTAGE R15 {$$ = $2;}
   ;
 
 csr:
-  PERCENTAGE STATUS {}
-  | PERCENTAGE HANDLER {}
-  | PERCENTAGE CAUSE {}
+  STATUS {$$ = $1;}
+  | HANDLER {$$ = $1;}
+  | CAUSE {$$ = $1;}
   ;
 
 reg:
@@ -183,18 +168,17 @@ reg:
   | csr
   ;
 
-int parser(int argc, char **argv) {
-  FILE *fp = NULL;
+  %%
 
-  if(argc == 2){
-    fp = fopen(argv[1], "r");
-  }
-  else if(argc == 4){
-    fp = fopen(argv[3], "r");
+  int start_parser(int argc, char **argv) {
+  FILE * fp;
+  const char* filename = (argc == 2) ? argv[1] : (argc == 4) ? argv[3] : NULL;
+  if (filename) {
+    fp = fopen(filename, "r");
   }
 
   if(fp == NULL){
-    perror("Failed to open file.");
+    perror("Failed to open input file.");
     return -1;
   }
   else{
@@ -207,11 +191,11 @@ int parser(int argc, char **argv) {
     fclose(fp);
   }
 
-  return 0;
+  return 1;
 
 }
 
 int yyerror(const char *p) {
     fprintf(stderr, "Error: %s\n", p);
-    return 0;
+    return -1;
 }

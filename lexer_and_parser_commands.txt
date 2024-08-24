@@ -1,0 +1,5 @@
+bison -d -o parser.tab.cpp --defines=parser.tab.hpp misc/parser.y
+flex -o lex.yy.cpp misc/lexer.lex
+g++ -o myparser parser.tab.cpp lex.yy.cpp -lfl
+
+./myparser tests/test.asm 
