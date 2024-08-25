@@ -245,9 +245,6 @@ void asmEndDir()
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
         int displacement = section->locationCounter - offset;
-        cout << "Symbol pool displacement: " << displacement << endl;
-        cout << "Symbol pool offset: " << offset << endl;
-        cout << "Symbol pool LC: " << section->locationCounter << endl;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
@@ -475,7 +472,6 @@ void asmLD(DataArguments *arguments, string *gpr)
     }
     break;
   case AddressType::VALUE_SYMBOL:
-    cout << "VALUE_SYMBOL LC: " << currentSection->locationCounter << endl;
     checkSymbolExistence(firstOperand);
     writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     break;
@@ -788,7 +784,6 @@ int literalToValue(string *literal)
     base = 8;
   }
 
-  cout << "pre conversion LITERAL: " << *literal << endl;
   int value = stoul(*literal, nullptr, base);
   return value;
 }
