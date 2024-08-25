@@ -5,4 +5,5 @@ main:
     ld $0xFFFFFFFE, %sp
     ld $h1, %r1
     ld $0xFFFFFFFF, %r1
+    jmp main
     .end
