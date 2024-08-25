@@ -8,7 +8,7 @@ using namespace std;
 int Symbol::ID = 0;
 map<int, Section *> *sections = new map<int, Section *>();
 map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
-vector<RelocationEntry *> *relocationTable = new vector<RelocationEntry *>();
+map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
 Section *currentSection = nullptr;
 int locationCounter = 0;
@@ -173,8 +173,8 @@ void asmWordDir(DirectiveArguments *arguments)
         if (symbol->defined)
         {
           // kreiraj relokacioni zapis
-          RelocationEntry *newReloc = new RelocationEntry(currentSection->sectionIndex, currentSection->locationCounter, RelocationType::ABSOLUTE, symbol->index);
-          relocationTable->push_back(newReloc);
+          RelocationEntry *newReloc = new RelocationEntry(currentSection->locationCounter, RelocationType::ABSOLUTE, symbol->index);
+          addRelocationEntry(currentSection, newReloc);
         }
         else
         {
@@ -235,9 +235,9 @@ void asmEndDir()
       auto offsets = symbolIterator->second;
 
       // kreiranje relokacionog zapisa
-      RelocationEntry *newReloc = new RelocationEntry(section->sectionIndex, section->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
-      relocationTable->push_back(newReloc);
 
+      RelocationEntry *newReloc = new RelocationEntry(currentSection->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
+      addRelocationEntry(currentSection, newReloc);
       // prolazimo kroz offsets
       for (int i = 0; i < offsets.size(); i++)
       {
@@ -678,9 +678,13 @@ void printRelocationTable(ostream &out)
 {
   out << "RELOCATION_TABLE" << endl;
   out << "section index|" << "offset|" << "relocation type|" << "symbol index" << endl;
-  for (int i = 0; i < relocationTable->size(); i++)
+  for (auto i = relocationTable->cbegin(); i != relocationTable->cend(); i++)
   {
-    (*relocationTable)[i]->print(out);
+    out << i->first << " ";
+    for (int j = 0; j < i->second.size(); j++)
+    {
+      (i->second)[j]->print(out);
+    }
   }
   out << endl;
 }
@@ -697,8 +701,9 @@ void backpatch(Symbol *symbol)
       if (forwardRef->isWordDir)
       {
         // ako je flink nastao u word dir, napravi relokacioni zapis
-        RelocationEntry *newReloc = new RelocationEntry(section->sectionIndex, section->locationCounter, RelocationType::ABSOLUTE, symbol->index);
-        relocationTable->push_back(newReloc);
+
+        RelocationEntry *newReloc = new RelocationEntry(section->locationCounter, RelocationType::ABSOLUTE, symbol->index);
+        addRelocationEntry(section, newReloc);
       }
       else
       {
@@ -707,6 +712,16 @@ void backpatch(Symbol *symbol)
       }
     }
   }
+}
+
+void addRelocationEntry(Section *section, RelocationEntry *newReloc)
+{
+  auto entry = relocationTable->find(section->sectionIndex);
+  if (entry == relocationTable->end())
+  {
+    (*relocationTable)[section->sectionIndex] = vector<RelocationEntry *>();
+  }
+  ((*relocationTable)[section->sectionIndex]).push_back(newReloc);
 }
 
 void addToPool(map<int, vector<int>> *pool, int index, int offset)

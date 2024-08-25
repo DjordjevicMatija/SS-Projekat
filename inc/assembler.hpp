@@ -6,7 +6,7 @@
 
 using namespace std;
 
-extern void print_hex(const vector<char>& value, ostream& out);
+extern void print_hex(const vector<char> &value, ostream &out);
 
 enum BindingType
 {
@@ -70,7 +70,7 @@ struct Symbol
     flink = nullptr;
   }
 
-  void print(ostream& out)
+  void print(ostream &out)
   {
     out << index << ": " << hex << value << dec << " " << type << " " << section << " " << defined << " ";
   }
@@ -78,19 +78,18 @@ struct Symbol
 
 struct RelocationEntry
 {
-  int sectionIndex;
   int offset; // offset u odnosu na sekciju
   RelocationType relocationType;
   int symbolIndex; // koji simblol treba da se doda
   bool resolved;
 
-  RelocationEntry(int sectionIndex, int offset, RelocationType relocationType, int symbolIndex)
-      : sectionIndex(sectionIndex), offset(offset), relocationType(relocationType),
+  RelocationEntry(int offset, RelocationType relocationType, int symbolIndex)
+      : offset(offset), relocationType(relocationType),
         symbolIndex(symbolIndex), resolved(false) {}
 
-  void print(ostream& out)
+  void print(ostream &out)
   {
-    out << sectionIndex << " " << hex << offset << dec << " " << relocationType << " " << symbolIndex << endl;
+    out << hex << offset << dec << " " << relocationType << " " << symbolIndex << endl;
   }
 };
 
@@ -114,7 +113,7 @@ struct Section
     literalPool = new map<int, vector<int>>();
   }
 
-  void print(ostream& out)
+  void print(ostream &out)
   {
     out << sectionIndex << ": " << *name << " section: (LC = " << locationCounter << ")" << endl;
     out << "Value:" << endl;
@@ -203,17 +202,18 @@ void asmST(string *gpr, DataArguments *arguments);
 void asmCSRRD(string *csr, string *gpr);
 void asmCSRWR(string *gpr, string *csr);
 
-void printSymbolTable(ostream& out);
-void printSections(ostream& out);
-void printRelocationTable(ostream& out);
-void writeToOutput(const string& output);
+void printSymbolTable(ostream &out);
+void printSections(ostream &out);
+void printRelocationTable(ostream &out);
+void writeToOutput(const string &output);
 
 void backpatch(Symbol *symbol);
+void addRelocationEntry(Section* section, RelocationEntry *newReloc);
 void addToPool(map<int, vector<int>> *pool, int index, int offset);
 void writeToSection(Section *section, int firstByte, int secondByte, int thirdByte, int fourthByte);
 
 void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2);
 int literalToValue(string *literal);
-void checkSymbolExistence(string* symbol);
-int symbolToValue(string* symbolName);
+void checkSymbolExistence(string *symbol);
+int symbolToValue(string *symbolName);
 int toSigned12b(int value);
