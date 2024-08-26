@@ -7,13 +7,16 @@ vector<ifstream> *files = new vector<ifstream>();
 map<string, int> *sectionAddress = new map<string, int>();
 
 int Symbol::ID = 0;
-map<int, Section *> *sections = new map<int, Section *>();
+int Symbol::SYMBOL_NAME_INCREMENT = 0;
+map<string, Section *> *sections = new map<string, Section *>();
 map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
-map<int, Section *> *asmSections = new map<int, Section *>();
+vector<Section *> *asmSections = new vector<Section *>();
 map<string, Symbol *> *asmSymbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *asmRelocationTable = new map<int, vector<RelocationEntry *>>();
+
+map<int, vector<RelocationEntry *>> *tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
 
 int main(int argc, char *argv[])
 {
@@ -139,6 +142,8 @@ void startLinker()
     }
 
     file.close();
+
+    processSections();
   }
 }
 
@@ -235,7 +240,7 @@ void getSections(ifstream &file)
       }
     }
 
-    (*asmSections)[index] = newSection;
+    asmSections->push_back(newSection);
   }
 }
 
@@ -247,6 +252,155 @@ void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sec
     (*relocTable)[sectionIndex] = vector<RelocationEntry *>();
   }
   ((*relocTable)[sectionIndex]).push_back(newReloc);
+}
+
+void processSections()
+{
+  // prolazimo kroz sve nove sekcije
+  for (int i = 0; i < asmSections->size(); i++)
+  {
+    // provera da li postoji sekcija sa tim imenom
+    auto asmSection = (*asmSections)[i];
+    auto sectionIterator = sections->find(*asmSection->name);
+    if (sectionIterator == sections->end())
+    {
+      // ne postoji sekcija sa tim imenom
+      (*sections)[*asmSection->name] = asmSection;
+    }
+    else
+    {
+      // postoji sekcija sa tim imenom
+      // na sadrzaj postojece sekcije zalepimo novu sekciju
+      auto lnSection = sectionIterator->second;
+      for (int j = 0; j < asmSection->value->size(); j++)
+      {
+        lnSection->value->push_back((*asmSection->value)[i]);
+      }
+
+      // prolazimo kroz relokacione zapise te sekcije i azuriramo ih
+      auto relocationIterator = asmRelocationTable->find(asmSection->sectionIndex);
+      if (relocationIterator != asmRelocationTable->end())
+      {
+        // postoje relokacioni zapisi za sekciju
+        auto reloc = relocationIterator->second;
+        for (int k = 0; k < reloc.size(); k++)
+        {
+          // uvecavamo offset u relokacionom zapisu
+          reloc[k]->offset += lnSection->size;
+        }
+      }
+
+      // azuriramo velicinu sekcije
+      lnSection->size += asmSection->size;
+    }
+  }
+}
+
+void processSymbols()
+{
+  // prolazimo kroz sve nove simbole
+  for (auto i = asmSymbolTable->cbegin(); i != asmSymbolTable->cend(); i++)
+  {
+    // provera da li postoji simbol sa tim imenom
+    auto asmSymbol = i->second;
+    auto asmSymbolName = i->first;
+    auto symIterator = symbolTable->find(asmSymbolName);
+    if (symIterator == symbolTable->end())
+    {
+      // ne postoji simbol sa tim imenom
+      addNewSymbol(asmSymbol, asmSymbolName);
+    }
+    else
+    {
+      // postoji simbol sa tim imenom
+      // proveravamo binding type novog simbola
+      string newSymbolName = "";
+      switch (asmSymbol->type)
+      {
+      case BindingType::LOCAL:
+        // preimenuj novi simbol i dodaj ga u tabelu simbola
+        newSymbolName = asmSymbolName + to_string(Symbol::SYMBOL_NAME_INCREMENT++);
+        addNewSymbol(asmSymbol, newSymbolName);
+        break;
+      case BindingType::GLOBAL:
+        // stari simbol LOCAL -> preimenuj stari LOCAL simbol
+        // stari simbol GLOBAL -> greska
+        // stari simbol EXTERN -> stari postaje GLOBAL, azuriramo mu sekciju u kojoj je definisan
+        // azuriraj novi relokacioni zapis da ukazuje na redefinisan EXTERN simbol (koji je postao GLOBAL)
+        // stari simbol SECTION -> greska
+        // stari simbol TYPE_FILE -> greska
+        break;
+      case BindingType::EXTERN:
+        // stari simbol LOCAL -> preimenuj stari LOCAL simbol
+        // stari simbol GLOBAL -> azuriraj relokacione zapise
+        // stari simbol EXTERN -> azuriraj novi relokacioni zapis da ukazuje na vec definisan EXTERN simbol
+        // stari simbol SECTION -> greska
+        // stari simbol TYPE_FILE -> greska
+        break;
+      case BindingType::SECTION:
+        // stari simbol LOCAL -> preimenuj stari LOCAL simbol
+        // stari simbol GLOBAL -> greska
+        // stari simbol EXTERN -> greska
+        // stari simbol SECTION -> ne radi nista
+        // stari simbol TYPE_FILE -> greska
+        break;
+      case BindingType::TYPE_FILE:
+        // greska
+        break;
+      }
+    }
+  }
+}
+
+void addNewSymbol(Symbol *newSymbol, string newSymolName)
+{
+  // azuriram mu indeks za tabelu simbola linkera
+  newSymbol->index = ++Symbol::ID;
+  (*symbolTable)[newSymolName] = newSymbol;
+
+  // prodji kroz sve relokacione zapise i azuriraj symbol index ili section index
+  for (auto relocIterator = asmRelocationTable->begin(); relocIterator != asmRelocationTable->end(); relocIterator++)
+  {
+    auto sectionIndex = relocIterator->first;
+    auto sectionRelocations = relocIterator->second;
+    if (newSymbol->type == BindingType::SECTION)
+    {
+      // azuriraj section index
+      // nova tabela relokacija sa izmenjenim section indexima
+      asmRelocationTable->erase(sectionIndex);
+      for (int j = 0; j < sectionRelocations.size(); j++)
+      {
+        addRelocationEntry(tmpRelocationTable, newSymbol->index, sectionRelocations[j]);
+      }
+    }
+    else
+    {
+      // azuriraj simbol index u asmRelocationTable
+      for (int j = 0; j < sectionRelocations.size(); j++)
+      {
+        // proveravamo da li se novi simbol pojavljuje u zapisu
+        if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
+        {
+          sectionRelocations[j]->symbolIndex = newSymbol->index;
+        }
+      }
+    }
+  }
+
+  // azuriraj simbol index u tmpRelocationTable
+  for (auto relocIterator = tmpRelocationTable->begin(); relocIterator != tmpRelocationTable->end(); relocIterator++)
+  {
+    auto sectionIndex = relocIterator->first;
+    auto sectionRelocations = relocIterator->second;
+    for (int j = 0; j < sectionRelocations.size(); j++)
+    {
+      // proveravamo da li se novi simbol pojavljuje u zapisu
+      if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
+      {
+        sectionRelocations[j]->symbolIndex = newSymbol->index;
+      }
+    }
+  }
 }
 
 void printSymbolTable(ostream &out)
@@ -265,7 +419,7 @@ void printSections(ostream &out)
 {
   out << "SECTIONS" << endl;
   out << "index|" << "name|" << "size" << endl;
-  for (auto i = asmSections->cbegin(); i != asmSections->cend(); i++)
+  for (auto i = sections->cbegin(); i != sections->cend(); i++)
   {
     i->second->print(out);
     out << endl;

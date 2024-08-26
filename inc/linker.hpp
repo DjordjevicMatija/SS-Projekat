@@ -25,6 +25,7 @@ enum RelocationType
 struct Symbol
 {
   static int ID;
+  static int SYMBOL_NAME_INCREMENT;
   int index;
   int oldIndex; // symbol index iz asemblera
   int value;    // adresa simbola
@@ -33,10 +34,8 @@ struct Symbol
   bool defined;
 
   Symbol(int oldIndex, int value, BindingType symType, int symSection, bool isDefined)
-      : oldIndex(oldIndex), value(value), type(symType), section(symSection), defined(isDefined)
-  {
-    index = ++ID;
-  }
+      : index(0), oldIndex(oldIndex), value(value), type(symType),
+        section(symSection), defined(isDefined) {}
 
   void print(ostream &out)
   {
@@ -92,6 +91,9 @@ void getSymbolTable(ifstream &file);
 void getRelocationTable(ifstream &file);
 void getSections(ifstream &file);
 void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sectionIndex, RelocationEntry *newReloc);
+void processSections();
+void processSymbols();
+void addNewSymbol(Symbol* newSymbol, string newSymolName);
 
 void printSymbolTable(ostream &out);
 void printSections(ostream &out);
