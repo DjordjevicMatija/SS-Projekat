@@ -18,6 +18,21 @@ map<int, vector<RelocationEntry *>> *asmRelocationTable = new map<int, vector<Re
 
 map<int, vector<RelocationEntry *>> *tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
 
+void printTmpRelocationTable(ostream &out)
+{
+  out << "RELOCATION_TABLE" << endl;
+  out << "section index|" << "offset|" << "relocation type|" << "symbol index" << endl;
+  for (auto i = tmpRelocationTable->cbegin(); i != tmpRelocationTable->cend(); i++)
+  {
+    for (int j = 0; j < i->second.size(); j++)
+    {
+      out << i->first << " ";
+      (i->second)[j]->print(out);
+    }
+  }
+  out << endl;
+}
+
 int main(int argc, char *argv[])
 {
   string output = "default_output.hex";
@@ -144,6 +159,7 @@ void startLinker()
     file.close();
 
     processSections();
+    processSymbols();
   }
 }
 
@@ -277,16 +293,27 @@ void processSections()
         lnSection->value->push_back((*asmSection->value)[i]);
       }
 
-      // prolazimo kroz relokacione zapise te sekcije i azuriramo ih
+      // trazimo relokacione zapise za tu sekciju i azuriramo im offset i section index
       auto relocationIterator = asmRelocationTable->find(asmSection->sectionIndex);
       if (relocationIterator != asmRelocationTable->end())
       {
         // postoje relokacioni zapisi za sekciju
-        auto reloc = relocationIterator->second;
-        for (int k = 0; k < reloc.size(); k++)
+        auto &reloc = relocationIterator->second;
+        // stari relokacioni zapis se brise
+        asmRelocationTable->erase(relocationIterator);
+
+        // pronadji index te sekcije u tabeli simbola
+        auto linkerSymbol = symbolTable->find(*asmSection->name);
+        if (linkerSymbol != symbolTable->end())
         {
-          // uvecavamo offset u relokacionom zapisu
-          reloc[k]->offset += lnSection->size;
+          for (int k = 0; k < reloc.size(); k++)
+          {
+            // uvecavamo offset u relokacionom zapisu
+            reloc[k]->offset += lnSection->size;
+
+            // nova tabela relokacija sa izmenjenim section indexima
+            addRelocationEntry(tmpRelocationTable, linkerSymbol->second->index, reloc[k]);
+          }
         }
       }
 
@@ -357,17 +384,22 @@ void addNewSymbol(Symbol *newSymbol, string newSymolName)
   // azuriram mu indeks za tabelu simbola linkera
   newSymbol->index = ++Symbol::ID;
   (*symbolTable)[newSymolName] = newSymbol;
-
+  // ako je tipa fajl ne treba nista da azurira
+  if (newSymbol->type == BindingType::TYPE_FILE)
+  {
+    return;
+  }
   // prodji kroz sve relokacione zapise i azuriraj symbol index ili section index
-  for (auto relocIterator = asmRelocationTable->begin(); relocIterator != asmRelocationTable->end(); relocIterator++)
+  for (auto relocIterator = asmRelocationTable->begin(); relocIterator != asmRelocationTable->end();)
   {
     auto sectionIndex = relocIterator->first;
-    auto sectionRelocations = relocIterator->second;
-    if (newSymbol->type == BindingType::SECTION)
+    auto &sectionRelocations = relocIterator->second;
+    if (sectionIndex == newSymbol->oldIndex && newSymbol->type == BindingType::SECTION)
     {
       // azuriraj section index
       // nova tabela relokacija sa izmenjenim section indexima
-      asmRelocationTable->erase(sectionIndex);
+      // stari relokacioni zapis se brise
+      relocIterator = asmRelocationTable->erase(relocIterator);
       for (int j = 0; j < sectionRelocations.size(); j++)
       {
         addRelocationEntry(tmpRelocationTable, newSymbol->index, sectionRelocations[j]);
@@ -384,21 +416,37 @@ void addNewSymbol(Symbol *newSymbol, string newSymolName)
           sectionRelocations[j]->symbolIndex = newSymbol->index;
         }
       }
+
+      // prelazimo na sledeci element
+      ++relocIterator;
     }
   }
 
-  // azuriraj simbol index u tmpRelocationTable
-  for (auto relocIterator = tmpRelocationTable->begin(); relocIterator != tmpRelocationTable->end(); relocIterator++)
+  if (newSymbol->type != BindingType::SECTION)
   {
-    auto sectionIndex = relocIterator->first;
-    auto sectionRelocations = relocIterator->second;
-    for (int j = 0; j < sectionRelocations.size(); j++)
+    // azuriraj simbol index u tmpRelocationTable
+    for (auto relocIterator = tmpRelocationTable->begin(); relocIterator != tmpRelocationTable->end(); relocIterator++)
     {
-      // proveravamo da li se novi simbol pojavljuje u zapisu
-      if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
+      auto sectionIndex = relocIterator->first;
+      auto &sectionRelocations = relocIterator->second;
+      for (int j = 0; j < sectionRelocations.size(); j++)
       {
-        sectionRelocations[j]->symbolIndex = newSymbol->index;
+        // proveravamo da li se novi simbol pojavljuje u zapisu
+        if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
+        {
+          sectionRelocations[j]->symbolIndex = newSymbol->index;
+        }
       }
+    }
+  }
+  else
+  {
+    // azuriraj section index u sekciji
+    auto sectionIter = sections->find(newSymolName);
+    if (sectionIter != sections->end())
+    {
+      auto section = sectionIter->second;
+      section->sectionIndex = newSymbol->index;
     }
   }
 }
@@ -407,7 +455,7 @@ void printSymbolTable(ostream &out)
 {
   out << "SYMBOL_TABLE" << endl;
   out << "index|" << "value|" << "type|" << "section|" << "defined|" << "label" << endl;
-  for (auto i = asmSymbolTable->cbegin(); i != asmSymbolTable->cend(); i++)
+  for (auto i = symbolTable->cbegin(); i != symbolTable->cend(); i++)
   {
     i->second->print(out);
     out << i->first << endl;

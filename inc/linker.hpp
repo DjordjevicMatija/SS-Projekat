@@ -39,7 +39,7 @@ struct Symbol
 
   void print(ostream &out)
   {
-    out << hex << index << " " << value << " " << type << " " << section << " " << defined << " ";
+    out << hex << oldIndex << "->" << index << " " << value << " " << type << " " << section << " " << defined << " ";
   }
 };
 
