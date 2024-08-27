@@ -10,7 +10,6 @@ map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
 Section *currentSection = nullptr;
-int locationCounter = 0;
 
 extern int start_parser(int argc, char **argv);
 
@@ -52,7 +51,7 @@ int main(int argc, char **argv)
     return -1;
   }
 
-  Symbol *program = new Symbol(locationCounter, BindingType::TYPE_FILE, 1, true);
+  Symbol *program = new Symbol(0, BindingType::TYPE_FILE, 1, true);
   (*symbolTable)[input] = program;
 
   int success = start_parser(argc, argv);
@@ -77,7 +76,7 @@ void asmLabel(string *label)
   if (symbolIterator == symbolTable->end())
   {
     // simbol se ne nalazi u tabeli simbola
-    Symbol *newSym = new Symbol(locationCounter, BindingType::LOCAL, currentSection->sectionIndex, true);
+    Symbol *newSym = new Symbol(currentSection->locationCounter, BindingType::LOCAL, currentSection->sectionIndex, true);
     (*symbolTable)[*label] = newSym;
   }
   else
@@ -96,7 +95,7 @@ void asmLabel(string *label)
       // simbol nije definisan
       if (symbol->section == 0 && symbol->type != BindingType::EXTERN)
       {
-        symbol->value = locationCounter;
+        symbol->value = currentSection->locationCounter;
         symbol->section = currentSection->sectionIndex;
         symbol->defined = true;
 
@@ -175,14 +174,13 @@ void asmSectionDir(string *name)
     (*sections)[newSym->index] = newSec;
 
     currentSection = newSec;
-    locationCounter = 0;
+    currentSection->locationCounter = 0;
   }
   else
   {
     // simbol se nalazi u tabeli simbola
     auto section = sections->find(symbolIterator->second->index);
     currentSection = section->second;
-    locationCounter = section->second->locationCounter;
   }
 }
 
@@ -254,9 +252,8 @@ void asmSkipDir(string *literal)
   {
     currentSection->value->push_back((char)0);
   }
-  locationCounter += skip;
-  currentSection->locationCounter = locationCounter;
-  currentSection->size = locationCounter;
+  currentSection->locationCounter += skip;
+  currentSection->size += skip;
 }
 
 void asmEndDir()

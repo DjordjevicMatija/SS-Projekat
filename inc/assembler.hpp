@@ -56,7 +56,7 @@ struct Symbol
 {
   static int ID;
   int index;
-  int value; // offset simbola
+  int value; // offset simbola u odnosu na pocetak sekcije u kojoj je definisan
   BindingType type;
   int section; // kojoj sekciji pripada, ABS - 1, UNDEF - 0
   bool defined;
