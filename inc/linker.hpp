@@ -93,7 +93,9 @@ void startLinker();
 void getSymbolTable(ifstream &file);
 void getRelocationTable(ifstream &file);
 void getSections(ifstream &file);
+
 void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sectionIndex, RelocationEntry *newReloc);
+
 void processSections();
 void processSymbols();
 void addNewSymbol(Symbol *newSymbol, string newSymolName);
@@ -103,7 +105,14 @@ string renameLocalSymbol(string oldSymbolName);
 void changeExternToGlobal(Symbol *externSymbol, Symbol *globalSymbol);
 void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol);
 
+void assignStartingAddresses();
+void assignSymbolAddressForSection(Section* section);
+void performRelocations();
+void writeToSection(Section *section, int offset, int firstByte, int secondByte, int thirdByte, int fourthByte);
+
+
 void printSymbolTable(ostream &out);
 void printSections(ostream &out);
 void printRelocationTable(ostream &out);
 void writeToOutput(const string &output);
+void printHexRepresentation(ostream &out);

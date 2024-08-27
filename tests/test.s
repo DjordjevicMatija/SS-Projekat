@@ -7,4 +7,6 @@ main:
     ld $0xFFFFFFFF, %r1
     jmp main
 main2:
+
+
     .end

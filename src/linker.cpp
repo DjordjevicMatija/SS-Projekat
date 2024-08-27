@@ -1,21 +1,38 @@
 #include "linker.hpp"
 #include <sstream>
+#include <iomanip>
+#include <algorithm>
 
 using namespace std;
 
 vector<ifstream> *files = new vector<ifstream>();
 map<string, int> *sectionAddress = new map<string, int>();
 
+// za cuvanje opsega zauzetih adresa
+vector<int> *sectionStartAdresses = new vector<int>();
+vector<int> *sectionEndAdresses = new vector<int>();
+
+// za odredjivanje adrese smestanja sekcija
+int highestStartingAddress = 0;
+
+// za mapiranje symbol index u symbol value
+map<int, int> *symbolIndexValue = new map<int, int>();
+
+// za mapiranje section index u section
+map<int, Section *> *symbolIndexSection = new map<int, Section *>();
+
 int Symbol::ID = 0;
 int Symbol::SYMBOL_NAME_INCREMENT = 0;
+
+// strukture linkera
 map<string, Section *> *sections = new map<string, Section *>();
 map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
+// pomocne strukture za obradu objektnih fajlova
 vector<Section *> *asmSections = new vector<Section *>();
 map<string, Symbol *> *asmSymbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *asmRelocationTable = new map<int, vector<RelocationEntry *>>();
-
 map<int, vector<RelocationEntry *>> *tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
 
 int main(int argc, char *argv[])
@@ -29,6 +46,9 @@ int main(int argc, char *argv[])
   printSymbolTable(cout);
   printRelocationTable(cout);
   printSections(cout);
+
+  printHexRepresentation(cout);
+  // writeToOutput(output);
 
   return 0;
 }
@@ -54,9 +74,9 @@ vector<ifstream> processArguments(int argc, char *argv[], string &output)
         exit(-1);
       }
     }
-    else if (arg.find("--place=") == 0)
+    else if (arg.find("-place=") == 0)
     {
-      string placeArg = arg.substr(8);
+      string placeArg = arg.substr(7);
       size_t atPos = placeArg.find('@');
       if (atPos != string::npos)
       {
@@ -153,6 +173,10 @@ void startLinker()
     processSymbols();
     processRelocations();
   }
+
+  assignStartingAddresses();
+
+  performRelocations();
 }
 
 void getSymbolTable(ifstream &file)
@@ -282,7 +306,7 @@ void processSections()
       auto lnSection = sectionIterator->second;
       for (int j = 0; j < asmSection->value->size(); j++)
       {
-        lnSection->value->push_back((*asmSection->value)[i]);
+        lnSection->value->push_back((*asmSection->value)[j]);
       }
 
       // pronadji tu sekciju u tabeli simbola
@@ -311,6 +335,16 @@ void processSections()
 
           // stari relokacioni zapis se brise
           asmRelocationTable->erase(relocationIterator);
+        }
+      }
+      // prolazi kroz asmSimbole i azurira im offset u odnosu na pocetak sekcije
+      for (auto symbIter = asmSymbolTable->begin(); symbIter != asmSymbolTable->end(); asmSymbolTable++)
+      {
+        auto name = symbIter->first;
+        auto symbol = symbIter->second;
+        if (symbol->section == asmSection->oldSectionIndex)
+        {
+          symbol->value += lnSection->size;
         }
       }
 
@@ -584,15 +618,15 @@ void resolveSymbolConflict(Symbol *oldSymbol, Symbol *newSymbol, string symbolNa
     }
     break;
   case BindingType::TYPE_FILE:
-    cerr << "Error: already defined file with that name" << endl;
+    cerr << "Error: Symbol '" << symbolName << "' already defined as file" << endl;
     exit(-3);
   }
 }
 
 string renameLocalSymbol(string symbolName)
 {
-  auto symbol = symbolTable->find(symbolName);
   string newName = symbolName + to_string(Symbol::SYMBOL_NAME_INCREMENT++);
+  auto symbol = symbolTable->find(newName);
   // kreiraj novo ime sve dok simbol sa datim imenom postoji
   while (symbol != symbolTable->end())
   {
@@ -649,6 +683,127 @@ void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol)
   }
 }
 
+void assignStartingAddresses()
+{
+  map<string, bool> skipSections = map<string, bool>();
+
+  // prodji kroz sve odredjene pocetne adrese za sekcije
+  for (auto secAddrIter = sectionAddress->cbegin(); secAddrIter != sectionAddress->cend(); secAddrIter++)
+  {
+    auto secName = secAddrIter->first;
+    auto secStart = secAddrIter->second;
+
+    // provera da li postoji sekcija sa tim imenom
+    auto sectionIter = sections->find(secName);
+    if (sectionIter != sections->end())
+    {
+      auto section = sectionIter->second;
+      int secEnd = secStart + section->size;
+
+      // dodati tu sekciju u listu sekcija koje se preskacu
+      skipSections[secName] = true;
+
+      // provera da li je moguce staviti sekciju na tu adresu
+      for (int i = 0; i < sectionStartAdresses->size(); i++)
+      {
+        if (secStart >= (*sectionStartAdresses)[i] && secStart <= (*sectionEndAdresses)[i] ||
+            secEnd >= (*sectionStartAdresses)[i] && secEnd <= (*sectionEndAdresses)[i])
+        {
+          cerr << "Error: Placing " << secName << " section at " << secStart << " location will overwrite other sections" << endl;
+          exit(-5);
+        }
+      }
+
+      section->startingAddress = secStart;
+      // azuriramo pocetnu adresu za smestanje sekcija bez unapred oderedjene adrese
+      if (highestStartingAddress < section->startingAddress + section->size)
+      {
+        highestStartingAddress = section->startingAddress + section->size;
+      }
+
+      assignSymbolAddressForSection(section);
+
+      // sacuvaj par sectionIndex, section
+      (*symbolIndexSection)[section->sectionIndex] = section;
+    }
+  }
+
+  // prodji kroz sve sekcije i dodeli im pocetne adrese
+  for (auto sectionIter = sections->begin(); sectionIter != sections->end(); sectionIter++)
+  {
+    auto secName = sectionIter->first;
+    auto section = sectionIter->second;
+
+    // provera da li preskacemo sekciju
+    if (skipSections.find(secName) != skipSections.end())
+    {
+      continue;
+    }
+
+    // ako sekcija nije preskocena dodaj joj pocetnu adresu
+    section->startingAddress = highestStartingAddress;
+    highestStartingAddress += section->size;
+
+    assignSymbolAddressForSection(section);
+
+    // sacuvaj par sectionIndex, section
+    (*symbolIndexSection)[section->sectionIndex] = section;
+  }
+}
+
+void assignSymbolAddressForSection(Section *section)
+{
+  // prodji kroz sve simbole te sekcije i dodeli im adrese
+  for (auto symbIter = symbolTable->begin(); symbIter != symbolTable->end(); symbIter++)
+  {
+    auto symbol = symbIter->second;
+
+    // provera da li simbol pripada sekciji
+    if (symbol->section == section->sectionIndex)
+    {
+
+      // dodeli mu adresu
+      symbol->value += section->startingAddress;
+
+      // sacuvaj par symbol index, symbol value
+      (*symbolIndexValue)[symbol->index] = symbol->value;
+    }
+  }
+}
+
+void performRelocations()
+{
+  // prolazimo kroz tabelu relokacija
+  for (auto relocIter = relocationTable->begin(); relocIter != relocationTable->end(); relocIter++)
+  {
+    auto sectionIndex = relocIter->first;
+    auto reloc = relocIter->second;
+
+    // pronadji sekciju iz symbolIndexSection sa sectionIndex
+    auto secIter = symbolIndexSection->find(sectionIndex);
+    auto section = secIter->second;
+
+    // prolazimo kroz sve relokacione zapise sekcije
+    for (int i = 0; i < reloc.size(); i++)
+    {
+      // pronadji simbol za koji se vrsi relokacija
+      auto symbIter = symbolIndexValue->find(reloc[i]->symbolIndex);
+      auto value = symbIter->second;
+
+      // u sekciji na offsetu reloc[i]->offset upisi symbValue na 4 bajta
+      writeToSection(section, reloc[i]->offset, (value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
+    }
+  }
+}
+
+void writeToSection(Section *section, int offset, int firstByte, int secondByte, int thirdByte, int fourthByte)
+{
+  (*section->value)[offset] = (char)firstByte;
+  (*section->value)[offset + 1] = (char)secondByte;
+  (*section->value)[offset + 2] = (char)thirdByte;
+  (*section->value)[offset + 3] = (char)fourthByte;
+}
+
 void printSymbolTable(ostream &out)
 {
   out << "SYMBOL_TABLE" << endl;
@@ -689,4 +844,55 @@ void printRelocationTable(ostream &out)
 
 void writeToOutput(const string &output)
 {
+  ofstream outfile(output);
+  if (!outfile)
+  {
+    cerr << "Failed to open output file: " << output << endl;
+    exit(-1);
+  }
+
+  printHexRepresentation(outfile);
+
+  outfile.close();
+  if (!outfile.good())
+  {
+    std::cerr << "Error occurred while writing to output file: " << output << std::endl;
+  }
+  else
+  {
+    std::cout << "Output written to file: " << output << std::endl;
+  }
+}
+
+void printHexRepresentation(ostream &out)
+{
+  vector<pair<string, Section*>> sortedSections(sections->begin(), sections->end());
+
+  sort(sortedSections.begin(), sortedSections.end(), [](const auto& a, const auto& b) {
+        return a.second->startingAddress < b.second->startingAddress;
+    });
+
+  for (auto sectIter : sortedSections)
+  {
+    auto section = sectIter.second;
+    int startingAddress = section->startingAddress;
+    auto value = section->value;
+
+    int address = startingAddress;
+    int cnt = 0;
+
+    for (char byte : *value)
+    {
+      if (cnt % 8 == 0)
+      {
+        if (cnt != 0)
+          out << endl;
+        out << hex << setw(8) << setfill('0') << address << ": ";
+      }
+      out << hex << setw(2) << setfill('0') << static_cast<unsigned int>(static_cast<unsigned char>(byte)) << " ";
+      address++;
+      cnt++;
+    }
+    out << endl;
+  }
 }
