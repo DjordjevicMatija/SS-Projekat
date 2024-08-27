@@ -340,7 +340,7 @@ void processSections()
         }
       }
       // prolazi kroz asmSimbole i azurira im offset u odnosu na pocetak sekcije
-      for (auto symbIter = asmSymbolTable->begin(); symbIter != asmSymbolTable->end(); asmSymbolTable++)
+      for (auto symbIter = asmSymbolTable->begin(); symbIter != asmSymbolTable->end(); symbIter++)
       {
         auto name = symbIter->first;
         auto symbol = symbIter->second;
@@ -808,8 +808,10 @@ void writeToSection(Section *section, int offset, int firstByte, int secondByte,
 
 void validateLinker()
 {
-  for(auto symbIter = symbolTable->cbegin(); symbIter != symbolTable->cend(); symbIter++){
-    if(!symbIter->second->defined){
+  for (auto symbIter = symbolTable->cbegin(); symbIter != symbolTable->cend(); symbIter++)
+  {
+    if (!symbIter->second->defined)
+    {
       cerr << "Error: Symbol '" << symbIter->first << "' not defined" << endl;
       exit(-6);
     }
@@ -878,11 +880,10 @@ void writeToOutput(const string &output)
 
 void printHexRepresentation(ostream &out)
 {
-  vector<pair<string, Section*>> sortedSections(sections->begin(), sections->end());
+  vector<pair<string, Section *>> sortedSections(sections->begin(), sections->end());
 
-  sort(sortedSections.begin(), sortedSections.end(), [](const auto& a, const auto& b) {
-        return a.second->startingAddress < b.second->startingAddress;
-    });
+  sort(sortedSections.begin(), sortedSections.end(), [](const auto &a, const auto &b)
+       { return a.second->startingAddress < b.second->startingAddress; });
 
   for (auto sectIter : sortedSections)
   {
