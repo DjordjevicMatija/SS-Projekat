@@ -284,8 +284,8 @@ void asmEndDir()
 
       // kreiranje relokacionog zapisa
 
-      RelocationEntry *newReloc = new RelocationEntry(currentSection->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
-      addRelocationEntry(currentSection, newReloc);
+      RelocationEntry *newReloc = new RelocationEntry(section->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
+      addRelocationEntry(section, newReloc);
       // prolazimo kroz offsets
       for (int i = 0; i < offsets.size(); i++)
       {
