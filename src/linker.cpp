@@ -43,12 +43,14 @@ int main(int argc, char *argv[])
 
   startLinker();
 
+  validateLinker();
+
   printSymbolTable(cout);
   printRelocationTable(cout);
   printSections(cout);
 
   printHexRepresentation(cout);
-  // writeToOutput(output);
+  writeToOutput(output);
 
   return 0;
 }
@@ -802,6 +804,16 @@ void writeToSection(Section *section, int offset, int firstByte, int secondByte,
   (*section->value)[offset + 1] = (char)secondByte;
   (*section->value)[offset + 2] = (char)thirdByte;
   (*section->value)[offset + 3] = (char)fourthByte;
+}
+
+void validateLinker()
+{
+  for(auto symbIter = symbolTable->cbegin(); symbIter != symbolTable->cend(); symbIter++){
+    if(!symbIter->second->defined){
+      cerr << "Error: Symbol '" << symbIter->first << "' not defined" << endl;
+      exit(-6);
+    }
+  }
 }
 
 void printSymbolTable(ostream &out)

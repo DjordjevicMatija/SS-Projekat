@@ -110,6 +110,7 @@ void assignSymbolAddressForSection(Section* section);
 void performRelocations();
 void writeToSection(Section *section, int offset, int firstByte, int secondByte, int thirdByte, int fourthByte);
 
+void validateLinker();
 
 void printSymbolTable(ostream &out);
 void printSections(ostream &out);
