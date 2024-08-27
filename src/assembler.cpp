@@ -292,7 +292,7 @@ void asmEndDir()
         // za svaki off racuna displacement = locationCounter - off
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
-        int displacement = section->locationCounter - offset;
+        int displacement = section->locationCounter - offset - 4;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
@@ -311,8 +311,7 @@ void asmEndDir()
         // za svaki off racuna displacement = locationCounter - off
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
-        int displacement = section->locationCounter - offset;
-
+        int displacement = section->locationCounter - offset - 4;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
