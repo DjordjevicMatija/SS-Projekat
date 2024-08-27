@@ -832,13 +832,29 @@ void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2)
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
+      if (code == 0x20)
+      {
+        code += 1;
+      }
+      else
+      {
+        code += 8;
+      }
+      writeToSection(currentSection, code, (15 << 4) | reg1, reg2 << 4, 0);
     }
   }
   else if (operandType == OperandType::TYPE_SYMBOL)
   {
     checkSymbolExistence(operand);
-    writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
+    if (code == 0x20)
+    {
+      code += 1;
+    }
+    else
+    {
+      code += 8;
+    }
+    writeToSection(currentSection, code, (15 << 4) | reg1, reg2 << 4, 0);
   }
 }
 
