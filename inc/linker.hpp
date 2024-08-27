@@ -31,15 +31,17 @@ struct Symbol
   int value;    // adresa simbola
   BindingType type;
   int section; // kojoj sekciji pripada, ABS - 1, UNDEF - 0
+  int oldSection;
   bool defined;
 
-  Symbol(int oldIndex, int value, BindingType symType, int symSection, bool isDefined)
+  Symbol(int oldIndex, int value, BindingType symType, int oldSymSection)
       : index(0), oldIndex(oldIndex), value(value), type(symType),
-        section(symSection), defined(isDefined) {}
+        section(oldSymSection), oldSection(oldSymSection), defined(false) {}
 
   void print(ostream &out)
   {
-    out << hex << oldIndex << "->" << index << " " << value << " " << type << " " << section << " " << defined << " ";
+    out << hex << oldIndex << "->" << index << " " << value << " " << type << " "
+        << oldSection << "->" << section << " " << defined << " ";
   }
 };
 
@@ -62,12 +64,13 @@ struct Section
 {
   string *name;
   int sectionIndex;
+  int oldSectionIndex;
   int size; // u bajtovima
   int startingAddress;
   vector<char> *value;
 
   Section(string name, int sectionIndex, int size)
-      : sectionIndex(sectionIndex), size(size), startingAddress(0)
+      : sectionIndex(sectionIndex), oldSectionIndex(sectionIndex), size(size), startingAddress(0)
   {
     this->name = new string(name);
     value = new vector<char>();
@@ -93,7 +96,12 @@ void getSections(ifstream &file);
 void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sectionIndex, RelocationEntry *newReloc);
 void processSections();
 void processSymbols();
-void addNewSymbol(Symbol* newSymbol, string newSymolName);
+void addNewSymbol(Symbol *newSymbol, string newSymolName);
+void processRelocations();
+void resolveSymbolConflict(Symbol *oldSymbol, Symbol *newSymbol, string symbolName);
+string renameLocalSymbol(string oldSymbolName);
+void changeExternToGlobal(Symbol *externSymbol, Symbol *globalSymbol);
+void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol);
 
 void printSymbolTable(ostream &out);
 void printSections(ostream &out);
