@@ -344,7 +344,7 @@ void asmIRET()
   writeToSection(currentSection, 0x96, 14, (-4 >> 8) & 0x0f, -4 & 0xff);
 
   // pop PC
-  writeToSection(currentSection, 0x96, (15 << 4) | 14, (-8 >> 8) & 0x0f, -8 & 0xff);
+  writeToSection(currentSection, 0x92, (15 << 4) | 14, (-8 >> 8) & 0x0f, -8 & 0xff);
 }
 
 void asmCALL(JumpArgument *argument)
@@ -535,11 +535,13 @@ void asmLD(DataArguments *arguments, string *gpr)
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
       writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
+      writeToSection(currentSection, 0x92, reg << 4, reg << 4, 0);
     }
     break;
   case AddressType::MEM_SYMBOL:
     checkSymbolExistence(firstOperand);
     writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
+    writeToSection(currentSection, 0x92, reg << 4, reg << 4, 0);
     break;
   case AddressType::VALUE_REG:
     regOperand = stoi((*firstOperand).substr(1));
