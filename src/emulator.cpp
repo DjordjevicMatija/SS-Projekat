@@ -77,6 +77,14 @@ int readFromMemory(unsigned int address)
   return data;
 }
 
+void writeToMemory(unsigned int address, int data)
+{
+  for (int i = 0; i < 4; i++)
+  {
+    memory[address + i] = (data >> (8 * (3 - i))) & 0xFF;
+  }
+}
+
 void executeProgram()
 {
   cpu.reg[PC] = programStart;
@@ -167,10 +175,10 @@ void handleINT()
 {
   // push status
   cpu.reg[SP] -= 4;
-  memory[cpu.reg[SP]] = cpu.csr[STATUS];
+  writeToMemory(cpu.reg[SP], cpu.csr[STATUS]);
   // push pc
   cpu.reg[SP] -= 4;
-  memory[cpu.reg[SP]] = cpu.reg[PC];
+  writeToMemory(cpu.reg[SP], cpu.reg[PC]);
   // cause <= 4
   cpu.csr[CAUSE] = 4;
   // status<=status&(~0x4)
@@ -186,16 +194,16 @@ void handleCALL(int mode, int regA, int regB, int disp)
   case 0x00:
     // push pc
     cpu.reg[SP] -= 4;
-    memory[cpu.reg[SP]] = cpu.reg[PC];
+    writeToMemory(cpu.reg[SP], cpu.reg[PC]);
     // pc<=gpr[A]+gpr[B]+D
     cpu.reg[PC] = cpu.reg[regA] + cpu.reg[regB] + disp;
     break;
   case 0x01:
     // push pc
     cpu.reg[SP] -= 4;
-    memory[cpu.reg[SP]] = cpu.reg[PC];
+    writeToMemory(cpu.reg[SP], cpu.reg[PC]);
     // pc<=mem32[gpr[A]+gpr[B]+D]
-    cpu.reg[PC] = memory[cpu.reg[regA] + cpu.reg[regB] + disp];
+    cpu.reg[PC] = readFromMemory(cpu.reg[regA] + cpu.reg[regB] + disp);
     break;
   default:
     cerr << "Error: Bad operation code" << endl;
@@ -229,24 +237,24 @@ void handleJMP(int mode, int regA, int regB, int regC, int disp)
     }
     break;
   case 0x08:
-    cpu.reg[PC] = memory[cpu.reg[regA] + disp];
+    cpu.reg[PC] = readFromMemory(cpu.reg[regA] + disp);
     break;
   case 0x09:
     if (cpu.reg[regB] == cpu.reg[regC])
     {
-      cpu.reg[PC] = memory[cpu.reg[regA] + disp];
+      cpu.reg[PC] = readFromMemory(cpu.reg[regA] + disp);
     }
     break;
   case 0x0a:
     if (cpu.reg[regB] != cpu.reg[regC])
     {
-      cpu.reg[PC] = memory[cpu.reg[regA] + disp];
+      cpu.reg[PC] = readFromMemory(cpu.reg[regA] + disp);
     }
     break;
   case 0x0b:
     if (cpu.reg[regB] > cpu.reg[regC])
     {
-      cpu.reg[PC] = memory[cpu.reg[regA] + disp];
+      cpu.reg[PC] = readFromMemory(cpu.reg[regA] + disp);
     }
     break;
   default:
@@ -324,17 +332,19 @@ void handleSHIFT(int mode, int regA, int regB, int regC)
 
 void handleSTORE(int mode, int regA, int regB, int regC, int disp)
 {
+  int addr = 0;
   switch (mode)
   {
   case 0x00:
-    memory[cpu.reg[regA] + cpu.reg[regB] + disp] = cpu.reg[regC];
+    writeToMemory(cpu.reg[regA] + cpu.reg[regB] + disp, cpu.reg[regC]);
     break;
   case 0x02:
-    memory[memory[cpu.reg[regA] + cpu.reg[regB] + disp]] = cpu.reg[regC];
+    addr = readFromMemory(cpu.reg[regA] + cpu.reg[regB]);
+    writeToMemory(addr, cpu.reg[regC]);
     break;
   case 0x01:
     cpu.reg[regA] = cpu.reg[regA] + disp;
-    memory[cpu.reg[regA]] = cpu.reg[regC];
+    writeToMemory(cpu.reg[regA], cpu.reg[regC]);
     break;
   default:
     cerr << "Error: Bad operation code" << endl;
@@ -353,15 +363,10 @@ void handleLOAD(int mode, int regA, int regB, int regC, int disp)
     cpu.reg[regA] = cpu.reg[regB] + disp;
     break;
   case 0x02:
-    cout << "regA before: " << cpu.reg[regA] << endl;
-    cout << "regB: " << cpu.reg[regB] << endl;
-    cout << "regC: " << cpu.reg[regC] << endl;
-    cout << "disp: " << disp << endl;
-    cout << "memory[cpu.reg[regB] + cpu.reg[regC] + disp] : " << readFromMemory(cpu.reg[regB] + cpu.reg[regC] + disp) << endl;
     cpu.reg[regA] = readFromMemory(cpu.reg[regB] + cpu.reg[regC] + disp);
     break;
   case 0x03:
-    cpu.reg[regA] = memory[cpu.reg[regB]];
+    cpu.reg[regA] = readFromMemory(cpu.reg[regB]);
     cpu.reg[regB] = cpu.reg[regB] + disp;
     break;
   case 0x04:
@@ -371,10 +376,10 @@ void handleLOAD(int mode, int regA, int regB, int regC, int disp)
     cpu.csr[regA] = cpu.csr[regB] | disp;
     break;
   case 0x06:
-    cpu.csr[regA] = memory[cpu.reg[regB] + cpu.reg[regC] + disp];
+    cpu.csr[regA] = readFromMemory(cpu.reg[regB] + cpu.reg[regC] + disp);
     break;
   case 0x07:
-    cpu.csr[regA] = memory[cpu.reg[regB]];
+    cpu.csr[regA] = readFromMemory(cpu.reg[regB]);
     cpu.reg[regB] = cpu.reg[regB] + disp;
     break;
   default:

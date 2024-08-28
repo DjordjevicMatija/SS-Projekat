@@ -366,7 +366,7 @@ void asmJMP(JumpArgument *argument)
 void asmBEQ(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x31, reg1, reg2);
 }
@@ -374,7 +374,7 @@ void asmBEQ(string *gpr1, string *gpr2, JumpArgument *argument)
 void asmBNE(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x32, reg1, reg2);
 }
@@ -382,7 +382,7 @@ void asmBNE(string *gpr1, string *gpr2, JumpArgument *argument)
 void asmBGT(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x33, reg1, reg2);
 }

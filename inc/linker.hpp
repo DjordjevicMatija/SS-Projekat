@@ -50,9 +50,9 @@ struct RelocationEntry
   int offset; // offset u odnosu na sekciju
   RelocationType relocationType;
   int symbolIndex; // koji simblol treba da se doda
-
+  int newSymbolIndex;
   RelocationEntry(int offset, RelocationType relocationType, int symbolIndex)
-      : offset(offset), relocationType(relocationType), symbolIndex(symbolIndex) {}
+      : offset(offset), relocationType(relocationType), symbolIndex(symbolIndex), newSymbolIndex(symbolIndex) {}
 
   void print(ostream &out)
   {

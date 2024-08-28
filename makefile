@@ -5,7 +5,7 @@ CXXFLAGS = -Iinc -g
 
 all: emulator linker assembler
 
-emulator: src/emulator.cpp
+emulator: src/emulator.cpp | linker
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 linker: src/linker.cpp src/util.cpp | assembler

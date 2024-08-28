@@ -39,5 +39,6 @@ void handleLOAD(int mode, int regA, int regB, int regC, int disp);
 
 void initializeMemory(ifstream& inputFile);
 int readFromMemory(unsigned int address);
+void writeToMemory(unsigned int address, int data);
 void executeProgram();
 void printFinishState();

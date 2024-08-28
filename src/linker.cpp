@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
   startLinker();
 
-  validateLinker();
+  // validateLinker();
 
   printSymbolTable(cout);
   printRelocationTable(cout);
@@ -288,7 +288,7 @@ void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sec
   ((*relocTable)[sectionIndex]).push_back(newReloc);
 }
 
-void processSections()
+void gdbprocessSections()
 {
   // prolazimo kroz sve nove sekcije
   for (int i = 0; i < asmSections->size(); i++)
@@ -339,6 +339,7 @@ void processSections()
           asmRelocationTable->erase(relocationIterator);
         }
       }
+      
       // prolazi kroz asmSimbole i azurira im offset u odnosu na pocetak sekcije
       for (auto symbIter = asmSymbolTable->begin(); symbIter != asmSymbolTable->end(); symbIter++)
       {
@@ -434,7 +435,7 @@ void addNewSymbol(Symbol *newSymbol, string newSymbolName)
         // proveravamo da li se novi simbol pojavljuje u zapisu
         if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
         {
-          sectionRelocations[j]->symbolIndex = newSymbol->index;
+          sectionRelocations[j]->newSymbolIndex = newSymbol->index;
         }
       }
 
@@ -455,7 +456,7 @@ void addNewSymbol(Symbol *newSymbol, string newSymbolName)
         // proveravamo da li se novi simbol pojavljuje u zapisu
         if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
         {
-          sectionRelocations[j]->symbolIndex = newSymbol->index;
+          sectionRelocations[j]->newSymbolIndex = newSymbol->index;
         }
       }
     }
@@ -492,6 +493,10 @@ void processRelocations()
     auto reloc = relocIterator->second;
     for (int i = 0; i < reloc.size(); i++)
     {
+      if (reloc[i]->symbolIndex != reloc[i]->newSymbolIndex)
+      {
+        reloc[i]->symbolIndex = reloc[i]->newSymbolIndex;
+      }
       addRelocationEntry(relocationTable, index, reloc[i]);
     }
   }
@@ -503,6 +508,10 @@ void processRelocations()
     auto reloc = relocIterator->second;
     for (int i = 0; i < reloc.size(); i++)
     {
+      if (reloc[i]->symbolIndex != reloc[i]->newSymbolIndex)
+      {
+        reloc[i]->symbolIndex = reloc[i]->newSymbolIndex;
+      }
       addRelocationEntry(relocationTable, index, reloc[i]);
     }
   }
@@ -662,7 +671,7 @@ void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol)
       // proveravamo da li se novi simbol pojavljuje u zapisu
       if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
       {
-        sectionRelocations[j]->symbolIndex = oldSymbol->index;
+        sectionRelocations[j]->newSymbolIndex = oldSymbol->index;
       }
     }
   }
@@ -679,7 +688,7 @@ void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol)
       // proveravamo da li se novi simbol pojavljuje u zapisu
       if (sectionRelocations[j]->symbolIndex == newSymbol->oldIndex)
       {
-        sectionRelocations[j]->symbolIndex = oldSymbol->index;
+        sectionRelocations[j]->newSymbolIndex = oldSymbol->index;
       }
     }
   }
@@ -687,6 +696,9 @@ void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol)
 
 void assignStartingAddresses()
 {
+  cout << "assignStartingAddresses start" << endl;
+  printSymbolTable(cout);
+
   map<string, bool> skipSections = map<string, bool>();
 
   // prodji kroz sve odredjene pocetne adrese za sekcije
@@ -751,6 +763,9 @@ void assignStartingAddresses()
     // sacuvaj par sectionIndex, section
     (*symbolIndexSection)[section->sectionIndex] = section;
   }
+
+  cout << "assignStartingAddresses end" << endl;
+  printSymbolTable(cout);
 }
 
 void assignSymbolAddressForSection(Section *section)
@@ -771,6 +786,9 @@ void assignSymbolAddressForSection(Section *section)
       (*symbolIndexValue)[symbol->index] = symbol->value;
     }
   }
+
+    cout << "assignStartingAddresses end" << endl;
+  printSymbolTable(cout);
 }
 
 void performRelocations()
