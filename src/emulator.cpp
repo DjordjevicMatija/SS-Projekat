@@ -16,6 +16,33 @@ Cpu cpu;
 bool halt = false;
 unsigned int programStart = 0x40000000;
 
+void printMemory(unsigned int startAddress, unsigned int endAddress)
+{
+  const int bytesPerLine = 8; // 8 bytes per line
+
+  for (unsigned int address = startAddress; address <= endAddress; address += bytesPerLine)
+  {
+    // Print the memory address
+    cout << hex << setw(8) << setfill('0') << address << ": ";
+
+    // Print the bytes at this address
+    for (int i = 0; i < bytesPerLine; ++i)
+    {
+      auto it = memory.find(address + i);
+      if (it != memory.end())
+      {
+        cout << hex << setw(2) << setfill('0') << (it->second & 0xFF) << " ";
+      }
+      else
+      {
+        cout << "   "; // If there's no data for this byte, leave it blank
+      }
+    }
+
+    cout << endl;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   if (argc != 2)
@@ -74,6 +101,7 @@ int readFromMemory(unsigned int address)
     data |= memory[address + i] << (8 * (3 - i));
   }
 
+  // cout << hex << "READ FROM MEMORY: " << data << endl;
   return data;
 }
 
@@ -99,9 +127,13 @@ void executeProgram()
     int regA = (instruction & 0x00f00000) >> 20;
     int regB = (instruction & 0x000f0000) >> 16;
     int regC = (instruction & 0x0000f000) >> 12;
-    int disp = instruction & 0x00000fff;
+    int disp = (instruction & 0x0fff) | ((instruction & 0x0800) ? 0xfffff000 : 0);
 
-    cout << hex << "Instruction code: " << instruction << endl;
+    // cout << hex << "reg[1]" <<  cpu.reg[1] << endl;
+    // cout << hex << "reg[2]" <<  cpu.reg[2] << endl;
+    // cout << hex << "reg[sp]" <<  cpu.reg[14] << endl;
+    // cout << hex << "reg[pc]" <<  cpu.reg[15] << endl;
+    // cout << hex << "Instruction code: " << instruction << endl;
     switch (code)
     {
     case HALT:
@@ -132,6 +164,7 @@ void executeProgram()
       handleSTORE(mode, regA, regB, regC, disp);
       break;
     case LOAD:
+      cout << "Instruction: " << hex << instruction << endl;
       handleLOAD(mode, regA, regB, regC, disp);
       break;
     default:
@@ -151,8 +184,8 @@ void printFinishState()
   for (int i = 0; i < 16; ++i)
   {
     cout << dec << "r" << i << "=0x"
-         << setw(8) << setfill('0') << hex << uppercase
-         << (cpu.reg[i] & 0xFFFFFFFF);
+         << setw(8) << setfill('0') << hex
+         << (cpu.reg[i] & 0xffffffff);
 
     // Print a newline after every 4 registers
     if ((i + 1) % 4 == 0)
@@ -339,7 +372,7 @@ void handleSTORE(int mode, int regA, int regB, int regC, int disp)
     writeToMemory(cpu.reg[regA] + cpu.reg[regB] + disp, cpu.reg[regC]);
     break;
   case 0x02:
-    addr = readFromMemory(cpu.reg[regA] + cpu.reg[regB]);
+    addr = readFromMemory(cpu.reg[regA] + cpu.reg[regB] + disp);
     writeToMemory(addr, cpu.reg[regC]);
     break;
   case 0x01:
