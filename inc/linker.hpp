@@ -106,7 +106,7 @@ void changeExternToGlobal(Symbol *externSymbol, Symbol *globalSymbol);
 void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol);
 
 void assignStartingAddresses();
-void assignSymbolAddressForSection(Section* section);
+void assignSymbolAddressForSection(Section *section);
 void performRelocations();
 void writeToSection(Section *section, int offset, int firstByte, int secondByte, int thirdByte, int fourthByte);
 

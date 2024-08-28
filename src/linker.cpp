@@ -30,10 +30,55 @@ map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
 // pomocne strukture za obradu objektnih fajlova
-vector<Section *> *asmSections = new vector<Section *>();
+map<string, Section *> *asmSections = new map<string, Section *>();
 map<string, Symbol *> *asmSymbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *asmRelocationTable = new map<int, vector<RelocationEntry *>>();
 map<int, vector<RelocationEntry *>> *tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
+
+
+
+
+void printAsmSymbolTable(ostream &out)
+{
+  out << "ASM SYMBOL_TABLE" << endl;
+  out << "index|" << "value|" << "type|" << "section|" << "defined|" << "label" << endl;
+  for (auto i = asmSymbolTable->cbegin(); i != asmSymbolTable->cend(); i++)
+  {
+    i->second->print(out);
+    out << i->first << endl;
+  }
+  out << endl;
+}
+void printAsmSections(ostream &out)
+{
+  out << "ASM SECTIONS" << endl;
+  out << "index|" << "name|" << "size" << endl;
+  for (auto i = asmSections->cbegin(); i != asmSections->cend(); i++)
+  {
+    i->second->print(out);
+    out << endl;
+  }
+}
+void printAsmRelocationTable(ostream &out)
+{
+  out << " ASM RELOCATION_TABLE" << endl;
+  out << "section index|" << "offset|" << "relocation type|" << "symbol index" << endl;
+  for (auto i = asmRelocationTable->cbegin(); i != asmRelocationTable->cend(); i++)
+  {
+    for (int j = 0; j < i->second.size(); j++)
+    {
+      out << i->first << " ";
+      (i->second)[j]->print(out);
+    }
+  }
+  out << endl;
+}
+
+
+
+
+
+
 
 int main(int argc, char *argv[])
 {
@@ -144,7 +189,7 @@ void startLinker()
     }
 
     // ocisti pomocne strukture za asembler
-    asmSections = new vector<Section *>();
+    asmSections = new map<string, Section *>();
     asmSymbolTable = new map<string, Symbol *>();
     asmRelocationTable = new map<int, vector<RelocationEntry *>>();
     tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
@@ -274,7 +319,7 @@ void getSections(ifstream &file)
       }
     }
 
-    asmSections->push_back(newSection);
+    (*asmSections)[*newSection->name] = newSection;
   }
 }
 
@@ -288,13 +333,13 @@ void addRelocationEntry(map<int, vector<RelocationEntry *>> *relocTable, int sec
   ((*relocTable)[sectionIndex]).push_back(newReloc);
 }
 
-void gdbprocessSections()
+void processSections()
 {
   // prolazimo kroz sve nove sekcije
-  for (int i = 0; i < asmSections->size(); i++)
+  for (auto i = asmSections->cbegin(); i != asmSections->cend(); i++)
   {
     // provera da li postoji sekcija sa tim imenom
-    auto asmSection = (*asmSections)[i];
+    auto asmSection = i->second;
     auto sectionIterator = sections->find(*asmSection->name);
     if (sectionIterator == sections->end())
     {
@@ -339,7 +384,7 @@ void gdbprocessSections()
           asmRelocationTable->erase(relocationIterator);
         }
       }
-      
+
       // prolazi kroz asmSimbole i azurira im offset u odnosu na pocetak sekcije
       for (auto symbIter = asmSymbolTable->begin(); symbIter != asmSymbolTable->end(); symbIter++)
       {
@@ -381,11 +426,11 @@ void processSymbols()
   }
 
   // prolazimo kroz sve asm sekcije
-  for (int i = 0; i < asmSections->size(); i++)
+  for (auto i = asmSections->cbegin(); i != asmSections->cend(); i++)
   {
     // prolazimo kroz sve simbole i ako ima nedefinisanih ne-EXTERN simbola
     // azuriraj im oldSection
-    auto section = (*asmSections)[i];
+    auto section = i->second;
     for (auto symbIterator = symbolTable->begin(); symbIterator != symbolTable->end(); symbIterator++)
     {
       auto symbol = symbIterator->second;
@@ -530,7 +575,7 @@ void resolveSymbolConflict(Symbol *oldSymbol, Symbol *newSymbol, string symbolNa
   case BindingType::GLOBAL:
     // stari simbol LOCAL -> preimenuj stari LOCAL simbol
     // stari simbol GLOBAL -> greska
-    // stari simbol EXTERN -> stari postaje GLOBAL, azuriraj mu sekciju u kojoj je definisan
+    // stari simbol EXTERN -> stari postaje GLOBAL, azuriraj mu sekciju u kojoj je definisan, azuriraj mu value
     // azuriraj relokacione zapise
     // stari simbol SECTION -> greska
     // stari simbol TYPE_FILE -> greska
@@ -652,6 +697,7 @@ void changeExternToGlobal(Symbol *externSymbol, Symbol *globalSymbol)
 {
   externSymbol->type = BindingType::GLOBAL;
   externSymbol->oldSection = globalSymbol->oldSection;
+  externSymbol->value = globalSymbol->value;
 
   updateExternGlobalRelocations(externSymbol, globalSymbol);
 }
@@ -696,9 +742,6 @@ void updateExternGlobalRelocations(Symbol *oldSymbol, Symbol *newSymbol)
 
 void assignStartingAddresses()
 {
-  cout << "assignStartingAddresses start" << endl;
-  printSymbolTable(cout);
-
   map<string, bool> skipSections = map<string, bool>();
 
   // prodji kroz sve odredjene pocetne adrese za sekcije
@@ -763,9 +806,6 @@ void assignStartingAddresses()
     // sacuvaj par sectionIndex, section
     (*symbolIndexSection)[section->sectionIndex] = section;
   }
-
-  cout << "assignStartingAddresses end" << endl;
-  printSymbolTable(cout);
 }
 
 void assignSymbolAddressForSection(Section *section)
@@ -786,9 +826,6 @@ void assignSymbolAddressForSection(Section *section)
       (*symbolIndexValue)[symbol->index] = symbol->value;
     }
   }
-
-    cout << "assignStartingAddresses end" << endl;
-  printSymbolTable(cout);
 }
 
 void performRelocations()
