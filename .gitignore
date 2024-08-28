@@ -1,2 +1,6 @@
 *.o
+*.hex
 assembler
+linker
+emulator
+.vscode

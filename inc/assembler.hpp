@@ -55,15 +55,14 @@ struct ForwardReference
 struct Symbol
 {
   static int ID;
-
   int index;
-  int value; // offset ili adresa simbola
+  int value; // offset simbola u odnosu na pocetak sekcije u kojoj je definisan
   BindingType type;
-  string section; // kojoj sekciji pripada, ABS, UNDEF, COMMON
+  int section; // kojoj sekciji pripada, ABS - 1, UNDEF - 0
   bool defined;
   ForwardReference *flink;
 
-  Symbol(int value, BindingType symType, string symSection, bool isDefined)
+  Symbol(int value, BindingType symType, int symSection, bool isDefined)
       : value(value), type(symType), section(symSection), defined(isDefined)
   {
     index = ++ID;
@@ -72,7 +71,7 @@ struct Symbol
 
   void print(ostream &out)
   {
-    out << index << ": " << hex << value << dec << " " << type << " " << section << " " << defined << " ";
+    out << hex  << index << " "<< value << " " << type << " " << section << " " << defined << " ";
   }
 };
 
@@ -81,15 +80,13 @@ struct RelocationEntry
   int offset; // offset u odnosu na sekciju
   RelocationType relocationType;
   int symbolIndex; // koji simblol treba da se doda
-  bool resolved;
 
   RelocationEntry(int offset, RelocationType relocationType, int symbolIndex)
-      : offset(offset), relocationType(relocationType),
-        symbolIndex(symbolIndex), resolved(false) {}
+      : offset(offset), relocationType(relocationType), symbolIndex(symbolIndex) {}
 
   void print(ostream &out)
   {
-    out << hex << offset << dec << " " << relocationType << " " << symbolIndex << endl;
+    out << hex << offset << " " << relocationType << " " << symbolIndex << endl;
   }
 };
 
@@ -101,8 +98,8 @@ struct Section
   int size;            // u bajtovima
   int startingAddress;
   vector<char> *value;
-  map<int, vector<int>> *symbolPool;  //<index, vectro<offset>>
-  map<int, vector<int>> *literalPool; //<value,
+  map<int, vector<int>> *symbolPool;  //<index, vector<offset>>
+  map<int, vector<int>> *literalPool; //<value, vector<offset>
 
   Section(string name, int sectionIndex)
       : sectionIndex(sectionIndex), locationCounter(0), size(0)
@@ -115,10 +112,15 @@ struct Section
 
   void print(ostream &out)
   {
-    out << sectionIndex << ": " << *name << " section: (LC = " << locationCounter << ")" << endl;
-    out << "Value:" << endl;
+    out << hex << sectionIndex << " " << *name << " " << size << endl;
     print_hex(*value, out);
   }
+
+  ~Section() {
+        delete value;
+        delete symbolPool;
+        delete literalPool;
+    }
 };
 
 struct JumpArgument
@@ -208,7 +210,7 @@ void printRelocationTable(ostream &out);
 void writeToOutput(const string &output);
 
 void backpatch(Symbol *symbol);
-void addRelocationEntry(Section* section, RelocationEntry *newReloc);
+void addRelocationEntry(Section *section, RelocationEntry *newReloc);
 void addToPool(map<int, vector<int>> *pool, int index, int offset);
 void writeToSection(Section *section, int firstByte, int secondByte, int thirdByte, int fourthByte);
 

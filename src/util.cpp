@@ -20,5 +20,4 @@ void print_hex(const vector<char>& value, ostream& out) {
     }
   }
   out << endl;
-  out << dec;
 }

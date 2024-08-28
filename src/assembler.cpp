@@ -1,5 +1,4 @@
 #include "assembler.hpp"
-#include <map>
 #include <iomanip>
 #include <fstream>
 
@@ -11,7 +10,58 @@ map<string, Symbol *> *symbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *relocationTable = new map<int, vector<RelocationEntry *>>();
 
 Section *currentSection = nullptr;
-int locationCounter = 0;
+
+extern int start_parser(int argc, char **argv);
+
+int main(int argc, char **argv)
+{
+  if (argc != 2 && argc != 4)
+  {
+    cerr << "Invalid number of arguments" << endl;
+    return -1;
+  }
+
+  string input, output;
+
+  if (argc == 2)
+  {
+    input = argv[1];
+    output = input.substr(0, input.size() - 2) + ".o";
+  }
+  else if (argc == 4)
+  {
+    if (string(argv[1]) != "-o")
+    {
+      cerr << "Invalid option. Use '-o' to specify the output file." << endl;
+      return -1;
+    }
+    output = argv[2];
+    input = argv[3];
+  }
+
+  if (!(input.size() > 2 && input.substr(input.size() - 2) == ".s"))
+  {
+    cerr << "Input file must end with '.s'" << endl;
+    return -1;
+  }
+
+  if (!(output.size() > 2 && output.substr(output.size() - 2) == ".o"))
+  {
+    cerr << "Output file must end with '.o'" << endl;
+    return -1;
+  }
+
+  Symbol *program = new Symbol(0, BindingType::TYPE_FILE, 1, true);
+  (*symbolTable)[input] = program;
+
+  int success = start_parser(argc, argv);
+  if (success)
+  {
+    writeToOutput(output);
+  }
+
+  return 0;
+}
 
 void asmLabel(string *label)
 {
@@ -26,7 +76,7 @@ void asmLabel(string *label)
   if (symbolIterator == symbolTable->end())
   {
     // simbol se ne nalazi u tabeli simbola
-    Symbol *newSym = new Symbol(locationCounter, BindingType::LOCAL, to_string(currentSection->sectionIndex), true);
+    Symbol *newSym = new Symbol(currentSection->locationCounter, BindingType::LOCAL, currentSection->sectionIndex, true);
     (*symbolTable)[*label] = newSym;
   }
   else
@@ -43,10 +93,10 @@ void asmLabel(string *label)
     else
     {
       // simbol nije definisan
-      if (symbol->section == "UNDEF" && symbol->type != BindingType::EXTERN)
+      if (symbol->section == 0 && symbol->type != BindingType::EXTERN)
       {
-        symbol->value = locationCounter;
-        symbol->section = to_string(currentSection->sectionIndex);
+        symbol->value = currentSection->locationCounter;
+        symbol->section = currentSection->sectionIndex;
         symbol->defined = true;
 
         backpatch(symbol);
@@ -69,7 +119,7 @@ void asmGlobalDir(DirectiveArguments *arguments)
     if (symbolIterator == symbolTable->end())
     {
       // simbol se ne nalazi u tabeli simbola
-      Symbol *newSym = new Symbol(0, BindingType::GLOBAL, "UNDEF", false);
+      Symbol *newSym = new Symbol(0, BindingType::GLOBAL, 0, false);
       (*symbolTable)[*(*arguments->operand)[i]] = newSym;
     }
     else
@@ -88,7 +138,7 @@ void asmExternDir(DirectiveArguments *arguments)
     if (symbolIterator == symbolTable->end())
     {
       // simbol se ne nalazi u tabeli simbola
-      Symbol *newSym = new Symbol(0, BindingType::EXTERN, "UNDEF", true);
+      Symbol *newSym = new Symbol(0, BindingType::EXTERN, 0, true);
       (*symbolTable)[*(*arguments->operand)[i]] = newSym;
     }
     else
@@ -116,22 +166,21 @@ void asmSectionDir(string *name)
   if (symbolIterator == symbolTable->end())
   {
     // simbol se ne nalazi u tabeli simbola
-    Symbol *newSym = new Symbol(0, BindingType::SECTION, "UNDEF", true);
-    newSym->section = to_string(newSym->index);
+    Symbol *newSym = new Symbol(0, BindingType::SECTION, 0, true);
+    newSym->section = newSym->index;
     (*symbolTable)[*name] = newSym;
 
     Section *newSec = new Section(*name, newSym->index);
     (*sections)[newSym->index] = newSec;
 
     currentSection = newSec;
-    locationCounter = 0;
+    currentSection->locationCounter = 0;
   }
   else
   {
     // simbol se nalazi u tabeli simbola
     auto section = sections->find(symbolIterator->second->index);
     currentSection = section->second;
-    locationCounter = section->second->locationCounter;
   }
 }
 
@@ -151,7 +200,7 @@ void asmWordDir(DirectiveArguments *arguments)
     if (operandType == OperandType::TYPE_LITERAL)
     {
       int value = literalToValue(operand);
-      writeToSection(currentSection, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+      writeToSection(currentSection, (value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
     }
     else if (operandType == OperandType::TYPE_SYMBOL)
     {
@@ -159,7 +208,7 @@ void asmWordDir(DirectiveArguments *arguments)
       if (symbolIterator == symbolTable->end())
       {
         // simbol se ne nalazi u tabeli simbola
-        Symbol *newSym = new Symbol(0, BindingType::LOCAL, "UNDEF", false);
+        Symbol *newSym = new Symbol(0, BindingType::LOCAL, 0, false);
         (*symbolTable)[*operand] = newSym;
 
         // kreiraj flink
@@ -203,9 +252,8 @@ void asmSkipDir(string *literal)
   {
     currentSection->value->push_back((char)0);
   }
-  locationCounter += skip;
-  currentSection->locationCounter = locationCounter;
-  currentSection->size = locationCounter;
+  currentSection->locationCounter += skip;
+  currentSection->size += skip;
 }
 
 void asmEndDir()
@@ -236,18 +284,15 @@ void asmEndDir()
 
       // kreiranje relokacionog zapisa
 
-      RelocationEntry *newReloc = new RelocationEntry(currentSection->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
-      addRelocationEntry(currentSection, newReloc);
+      RelocationEntry *newReloc = new RelocationEntry(section->locationCounter, RelocationType::ABSOLUTE, symbolIndex);
+      addRelocationEntry(section, newReloc);
       // prolazimo kroz offsets
       for (int i = 0; i < offsets.size(); i++)
       {
         // za svaki off racuna displacement = locationCounter - off
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
-        int displacement = section->locationCounter - offset;
-        cout << "Symbol pool displacement: " << displacement << endl;
-        cout << "Symbol pool offset: " << offset << endl;
-        cout << "Symbol pool LC: " << section->locationCounter << endl;
+        int displacement = section->locationCounter - offset - 4;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
@@ -266,8 +311,7 @@ void asmEndDir()
         // za svaki off racuna displacement = locationCounter - off
         // section[off] = displacement  - samo poslednjih 12b menjamo
         int offset = offsets[i];
-        int displacement = section->locationCounter - offset;
-
+        int displacement = section->locationCounter - offset - 4;
         (*(section->value))[offset + 2] |= ((displacement >> 8) & 0x0f);
         (*(section->value))[offset + 3] = (displacement & 0xff);
       }
@@ -300,7 +344,7 @@ void asmIRET()
   writeToSection(currentSection, 0x96, 14, (-4 >> 8) & 0x0f, -4 & 0xff);
 
   // pop PC
-  writeToSection(currentSection, 0x96, (15 << 4) | 14, (-8 >> 8) & 0x0f, -8 & 0xff);
+  writeToSection(currentSection, 0x92, (15 << 4) | 14, (-8 >> 8) & 0x0f, -8 & 0xff);
 }
 
 void asmCALL(JumpArgument *argument)
@@ -322,7 +366,7 @@ void asmJMP(JumpArgument *argument)
 void asmBEQ(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x31, reg1, reg2);
 }
@@ -330,7 +374,7 @@ void asmBEQ(string *gpr1, string *gpr2, JumpArgument *argument)
 void asmBNE(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x32, reg1, reg2);
 }
@@ -338,7 +382,7 @@ void asmBNE(string *gpr1, string *gpr2, JumpArgument *argument)
 void asmBGT(string *gpr1, string *gpr2, JumpArgument *argument)
 {
   int reg1 = stoi((*gpr1).substr(1));
-  int reg2 = stoi((*gpr1).substr(1));
+  int reg2 = stoi((*gpr2).substr(1));
 
   callOrJumpInstruction(argument, 0x33, reg1, reg2);
 }
@@ -475,7 +519,6 @@ void asmLD(DataArguments *arguments, string *gpr)
     }
     break;
   case AddressType::VALUE_SYMBOL:
-    cout << "VALUE_SYMBOL LC: " << currentSection->locationCounter << endl;
     checkSymbolExistence(firstOperand);
     writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
     break;
@@ -492,11 +535,13 @@ void asmLD(DataArguments *arguments, string *gpr)
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
       writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
+      writeToSection(currentSection, 0x92, reg << 4, reg << 4, 0);
     }
     break;
   case AddressType::MEM_SYMBOL:
     checkSymbolExistence(firstOperand);
     writeToSection(currentSection, 0x92, reg << 4, 15 << 4, 0);
+    writeToSection(currentSection, 0x92, reg << 4, reg << 4, 0);
     break;
   case AddressType::VALUE_REG:
     regOperand = stoi((*firstOperand).substr(1));
@@ -666,7 +711,7 @@ void printSymbolTable(ostream &out)
 void printSections(ostream &out)
 {
   out << "SECTIONS" << endl;
-  out << "index|" << "name " << endl;
+  out << "index|" << "name|" << "size" << endl;
   for (auto i = sections->cbegin(); i != sections->cend(); i++)
   {
     i->second->print(out);
@@ -680,13 +725,37 @@ void printRelocationTable(ostream &out)
   out << "section index|" << "offset|" << "relocation type|" << "symbol index" << endl;
   for (auto i = relocationTable->cbegin(); i != relocationTable->cend(); i++)
   {
-    out << i->first << " ";
     for (int j = 0; j < i->second.size(); j++)
     {
+      out << i->first << " ";
       (i->second)[j]->print(out);
     }
   }
   out << endl;
+}
+
+void writeToOutput(const string &output)
+{
+  ofstream outfile(output);
+  if (!outfile)
+  {
+    cerr << "Failed to open output file: " << output << endl;
+    exit(-1);
+  }
+
+  printSymbolTable(outfile);
+  printRelocationTable(outfile);
+  printSections(outfile);
+
+  outfile.close();
+  if (!outfile.good())
+  {
+    cerr << "Error occurred while writing to output file: " << output << endl;
+  }
+  else
+  {
+    cout << "Output written to file: " << output << endl;
+  }
 }
 
 void backpatch(Symbol *symbol)
@@ -765,13 +834,29 @@ void callOrJumpInstruction(JumpArgument *argument, int code, int reg1, int reg2)
     {
       // litera ne moze da stane u 12b
       addToPool(currentSection->literalPool, value, currentSection->locationCounter);
-      writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
+      if (code == 0x20)
+      {
+        code += 1;
+      }
+      else
+      {
+        code += 8;
+      }
+      writeToSection(currentSection, code, (15 << 4) | reg1, reg2 << 4, 0);
     }
   }
   else if (operandType == OperandType::TYPE_SYMBOL)
   {
     checkSymbolExistence(operand);
-    writeToSection(currentSection, code + 0b1000, (15 << 4) | reg1, reg2 << 4, 0);
+    if (code == 0x20)
+    {
+      code += 1;
+    }
+    else
+    {
+      code += 8;
+    }
+    writeToSection(currentSection, code, (15 << 4) | reg1, reg2 << 4, 0);
   }
 }
 
@@ -788,7 +873,6 @@ int literalToValue(string *literal)
     base = 8;
   }
 
-  cout << "pre conversion LITERAL: " << *literal << endl;
   int value = stoul(*literal, nullptr, base);
   return value;
 }
@@ -799,7 +883,7 @@ void checkSymbolExistence(string *symbolName)
   if (symbolIterator == symbolTable->end())
   {
     // simbol se ne nalazi u tabeli simbola
-    Symbol *newSym = new Symbol(0, BindingType::LOCAL, "UNDEF", false);
+    Symbol *newSym = new Symbol(0, BindingType::LOCAL, 0, false);
     (*symbolTable)[*symbolName] = newSym;
 
     // kreiraj flink
@@ -843,7 +927,7 @@ int symbolToValue(string *symbolName)
       cerr << "Undefined symbol used in LD/ST" << endl;
       exit(-4);
     }
-    if (symbol->section != "ABS")
+    if (symbol->section != 1)
     {
       cerr << "Undefined symbol used in LD/ST" << endl;
       exit(-4);
@@ -859,81 +943,4 @@ int toSigned12b(int value)
     value += 0x1000;
   }
   return value & 0xFFF;
-}
-
-string output;
-extern int start_parser(int argc, char **argv);
-
-int main(int argc, char **argv)
-{
-  if (argc != 2 && argc != 4)
-  {
-    cerr << "Invalid number of arguments" << endl;
-    return -1;
-  }
-
-  string input, output;
-
-  if (argc == 2)
-  {
-    input = argv[1];
-    output = input.substr(0, input.size() - 2) + ".o";
-  }
-  else if (argc == 4)
-  {
-    if (string(argv[1]) != "-o")
-    {
-      cerr << "Invalid option. Use '-o' to specify the output file." << endl;
-      return -1;
-    }
-    output = argv[2];
-    input = argv[3];
-  }
-
-  if (!(input.size() > 2 && input.substr(input.size() - 2) == ".s"))
-  {
-    cerr << "Input file must end with '.s'" << endl;
-    return -1;
-  }
-
-  if (!(output.size() > 2 && output.substr(output.size() - 2) == ".o"))
-  {
-    cerr << "Output file must end with '.o'" << endl;
-    return -1;
-  }
-
-  Symbol *program = new Symbol(locationCounter, BindingType::TYPE_FILE, "ABS", true);
-  (*symbolTable)[argv[0]] = program;
-
-  int success = start_parser(argc, argv);
-  if (success)
-  {
-    writeToOutput(output);
-  }
-
-  return 0;
-}
-
-void writeToOutput(const string &output)
-{
-  ofstream outfile(output);
-  if (!outfile)
-  {
-    cerr << "Failed to open output file: " << output << endl;
-    exit(-1);
-  }
-
-  printSymbolTable(outfile);
-  printRelocationTable(outfile);
-  printSections(outfile);
-
-  outfile.close();
-  if (!outfile.good())
-  {
-    std::cerr << "Error occurred while writing to output file: " << output << std::endl;
-  }
-  else
-  {
-    std::cout << "Output written to file: " << output << std::endl;
-  }
 }
