@@ -200,7 +200,7 @@ void asmWordDir(DirectiveArguments *arguments)
     if (operandType == OperandType::TYPE_LITERAL)
     {
       int value = literalToValue(operand);
-      writeToSection(currentSection, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+      writeToSection(currentSection, (value >> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
     }
     else if (operandType == OperandType::TYPE_SYMBOL)
     {

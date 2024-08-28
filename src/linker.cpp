@@ -870,11 +870,11 @@ void writeToOutput(const string &output)
   outfile.close();
   if (!outfile.good())
   {
-    std::cerr << "Error occurred while writing to output file: " << output << std::endl;
+    cerr << "Error occurred while writing to output file: " << output << endl;
   }
   else
   {
-    std::cout << "Output written to file: " << output << std::endl;
+    cout << "Output written to file: " << output << endl;
   }
 }
 

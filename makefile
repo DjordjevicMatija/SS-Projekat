@@ -5,7 +5,7 @@ CXXFLAGS = -Iinc -g
 
 all: emulator linker assembler
 
-emulator: src/emulator.cpp | linker
+emulator: src/emulator.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 linker: src/linker.cpp src/util.cpp | assembler
@@ -26,3 +26,6 @@ clean_assembly:
 
 clean:
 	rm -f assembler linker emulator
+
+clean_object_files:
+	rm -f *.o
