@@ -13,7 +13,7 @@ vector<int> *sectionStartAdresses = new vector<int>();
 vector<int> *sectionEndAdresses = new vector<int>();
 
 // za odredjivanje adrese smestanja sekcija
-int highestStartingAddress = 0;
+unsigned int highestStartingAddress = 0;
 
 // za mapiranje symbol index u symbol value
 map<int, int> *symbolIndexValue = new map<int, int>();
@@ -946,7 +946,7 @@ void printHexRepresentation(ostream &out)
     int startingAddress = section->startingAddress;
     auto value = section->value;
 
-    int address = startingAddress;
+    unsigned int address = startingAddress;
     int cnt = 0;
 
     for (char byte : *value)

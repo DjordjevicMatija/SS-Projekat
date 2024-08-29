@@ -66,7 +66,7 @@ struct Section
   int sectionIndex;
   int oldSectionIndex;
   int size; // u bajtovima
-  int startingAddress;
+  unsigned int startingAddress;
   vector<char> *value;
 
   Section(string name, int sectionIndex, int size)
