@@ -164,7 +164,6 @@ void executeProgram()
       handleSTORE(mode, regA, regB, regC, disp);
       break;
     case LOAD:
-      cout << "Instruction: " << hex << instruction << endl;
       handleLOAD(mode, regA, regB, regC, disp);
       break;
     default:
