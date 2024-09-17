@@ -256,6 +256,23 @@ void asmSkipDir(string *literal)
   currentSection->size += skip;
 }
 
+void asmAsciiDir(string* ascii)
+{
+  if (currentSection == nullptr)
+  {
+    cerr << "Skip must be declared in section" << endl;
+    exit(-2);
+  }
+
+  int skip = ascii->length();
+  for (int i = 0; i < skip; i++)
+  {
+    currentSection->value->push_back((*ascii)[i]);
+  }
+  currentSection->locationCounter += skip;
+  currentSection->size += skip;
+}
+
 void asmEndDir()
 {
   // provera da li su svi simboli definisani

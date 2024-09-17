@@ -44,6 +44,7 @@ int yylex();
 
 %token <stringType> SYMBOL
 %token <stringType> LITERAL
+%token <stringType> STRING
 
 %type <directiveArgs> symbolList
 %type <directiveArgs> symbolOrLiteralList
@@ -78,6 +79,7 @@ directive:
   | SECTIONDIR SYMBOL {asmSectionDir($2);}
   | WORDDIR symbolOrLiteralList {asmWordDir($2);}
   | SKIPDIR LITERAL {asmSkipDir($2);}
+  | ASCIIDIR STRING {asmAsciiDir($2);}
   | ENDDIR {asmEndDir(); return -1;}
   ;
 

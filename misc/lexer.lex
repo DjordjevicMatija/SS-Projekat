@@ -75,11 +75,13 @@ using namespace std;
 %[hH][aA][nN][dD][lL][eE][rR] {yylval.stringType = new string("HANDLER"); return HANDLER;}
 %[cC][aA][uU][sS][eE] {yylval.stringType = new string("CAUSE"); return CAUSE;}
 
-0b[0-1]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
-0[0-7]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
-(0|([1-9][0-9]*)) {yylval.stringType = new std::string(yytext); return LITERAL; }
-0x[0-9a-fA-F]+ {yylval.stringType = new std::string(yytext); return LITERAL; }
+0b[0-1]+ {yylval.stringType = new string(yytext); return LITERAL; }
+0[0-7]+ {yylval.stringType = new string(yytext); return LITERAL; }
+(0|([1-9][0-9]*)) {yylval.stringType = new string(yytext); return LITERAL; }
+0x[0-9a-fA-F]+ {yylval.stringType = new string(yytext); return LITERAL; }
 [a-zA-Z][a-zA-Z0-9_]* {yylval.stringType = new string(yytext); return SYMBOL;}
+
+\".*\" {yylval.stringType = new string(yytext + 1, strlen(yytext) - 2); return STRING;}
 
 [ \t\r]* {}
 \n {return EOL;}
