@@ -26,6 +26,7 @@ clean_assembly:
 
 clean:
 	rm -f assembler linker emulator
+	@$(MAKE) clean_object_files
 
 clean_object_files:
-	rm -f *.o
+	rm -f *.o *.hex
