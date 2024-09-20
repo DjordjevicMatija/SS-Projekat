@@ -35,8 +35,8 @@ map<string, Symbol *> *asmSymbolTable = new map<string, Symbol *>();
 map<int, vector<RelocationEntry *>> *asmRelocationTable = new map<int, vector<RelocationEntry *>>();
 map<int, vector<RelocationEntry *>> *tmpRelocationTable = new map<int, vector<RelocationEntry *>>();
 
-
-
+// hex
+bool isHex = false;
 
 void printAsmSymbolTable(ostream &out)
 {
@@ -74,12 +74,6 @@ void printAsmRelocationTable(ostream &out)
   out << endl;
 }
 
-
-
-
-
-
-
 int main(int argc, char *argv[])
 {
   string output = "default_output.hex";
@@ -88,14 +82,17 @@ int main(int argc, char *argv[])
 
   startLinker();
 
-  // validateLinker();
+  validateLinker();
 
   printSymbolTable(cout);
   printRelocationTable(cout);
   printSections(cout);
 
-  printHexRepresentation(cout);
-  writeToOutput(output);
+  if (isHex)
+  {
+    printHexRepresentation(cout);
+    writeToOutput(output);
+  }
 
   return 0;
 }
@@ -140,6 +137,21 @@ vector<ifstream> processArguments(int argc, char *argv[], string &output)
     }
     else if (arg == "-hex")
     {
+      if (valid)
+      {
+        cerr << "Error: Both '-hex' and '-relocatable' options are present" << endl;
+        exit(-1);
+      }
+      valid = true;
+      isHex = true;
+    }
+    else if (arg == "-relocatable")
+    {
+      if (valid)
+      {
+        cerr << "Error: Both '-hex' and '-relocatable' options are present" << endl;
+        exit(-1);
+      }
       valid = true;
     }
     else if (arg[0] == '-')
@@ -221,9 +233,11 @@ void startLinker()
     processRelocations();
   }
 
-  assignStartingAddresses();
-
-  performRelocations();
+  if (isHex)
+  {
+    assignStartingAddresses();
+    performRelocations();
+  }
 }
 
 void getSymbolTable(ifstream &file)
@@ -766,12 +780,17 @@ void assignStartingAddresses()
         if (secStart >= (*sectionStartAdresses)[i] && secStart <= (*sectionEndAdresses)[i] ||
             secEnd >= (*sectionStartAdresses)[i] && secEnd <= (*sectionEndAdresses)[i])
         {
-          cerr << "Error: Placing " << secName << " section at " << secStart << " location will overwrite other sections" << endl;
+          cerr << "Error: Placing " << secName << " section at " << hex << secStart << " location will overwrite other sections" << endl;
           exit(-5);
         }
       }
 
       section->startingAddress = secStart;
+
+      // sacuvamo pocetnu i krajnju vrednost sekcije
+      sectionStartAdresses->push_back(secStart);
+      sectionEndAdresses->push_back(secEnd);
+
       // azuriramo pocetnu adresu za smestanje sekcija bez unapred oderedjene adrese
       if (highestStartingAddress < section->startingAddress + section->size)
       {
@@ -795,6 +814,12 @@ void assignStartingAddresses()
     if (skipSections.find(secName) != skipSections.end())
     {
       continue;
+    }
+
+    // provera da li smo presli u prostor za memorijski mapirane registre
+    if (highestStartingAddress + section->size >= 0xFFFFFF00)
+    {
+      cerr << "Error: Addresses from 0xFFFFFFFF00 are reserved for memmory mapped registers" << endl;
     }
 
     // ako sekcija nije preskocena dodaj joj pocetnu adresu
@@ -863,6 +888,10 @@ void writeToSection(Section *section, int offset, int firstByte, int secondByte,
 
 void validateLinker()
 {
+  if (!isHex)
+  {
+    return;
+  }
   for (auto symbIter = symbolTable->cbegin(); symbIter != symbolTable->cend(); symbIter++)
   {
     if (!symbIter->second->defined)

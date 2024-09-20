@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
 
 using namespace std;
 
@@ -15,6 +18,11 @@ Cpu cpu;
 
 bool halt = false;
 unsigned int programStart = 0x40000000;
+
+int term_in = 0;
+int term_out = 0;
+
+bool interrupt = false;
 
 void printMemory(unsigned int startAddress, unsigned int endAddress)
 {
@@ -62,6 +70,9 @@ int main(int argc, char *argv[])
 
   initializeMemory(inputFile);
 
+  setTerminalSettings();
+  atexit(resetTerminalSettings);
+
   executeProgram();
 
   printFinishState();
@@ -95,18 +106,28 @@ void initializeMemory(ifstream &inputFile)
 
 int readFromMemory(unsigned int address)
 {
+  if (address >= TERM_IN_ADDR && address < TERM_IN_ADDR + 4)
+  {
+    return term_in;
+  }
+
   int data = 0;
   for (int i = 0; i < 4; i++)
   {
     data |= memory[address + i] << (8 * (3 - i));
   }
 
-  // cout << hex << "READ FROM MEMORY: " << data << endl;
   return data;
 }
 
 void writeToMemory(unsigned int address, int data)
 {
+  if (address >= TERM_OUT_ADDR && address < TERM_OUT_ADDR + 4)
+  {
+    handleTermOut(data);
+    return;
+  }
+
   for (int i = 0; i < 4; i++)
   {
     memory[address + i] = (data >> (8 * (3 - i))) & 0xFF;
@@ -170,6 +191,37 @@ void executeProgram()
       cerr << "Error: Bad operation code" << endl;
       break;
     }
+
+    handleTermIn();
+    checkInterrupt();
+  }
+}
+
+void checkInterrupt()
+{
+  // provera da li su dozvoljeni prekidi
+  if (cpu.csr[STATUS] & STATUS_INTERRUPT_MASK || halt)
+  {
+    return;
+  }
+
+  // provera da li je prekid od terminala dozvoljen
+  if (interrupt && !(cpu.csr[STATUS] & STATUS_TERMINAL_INTERRUPT_MASK))
+  {
+    // push status
+    cpu.reg[SP] -= 4;
+    writeToMemory(cpu.reg[SP], cpu.csr[STATUS]);
+    // push pc
+    cpu.reg[SP] -= 4;
+    writeToMemory(cpu.reg[SP], cpu.reg[PC]);
+    // cause <= 3
+    cpu.csr[CAUSE] = 3;
+    // status<=status&(~0x4)
+    cpu.csr[STATUS] |= STATUS_INTERRUPT_MASK;
+    // pc<=handler
+    cpu.reg[PC] = cpu.csr[HANDLER];
+
+    interrupt = false;
   }
 }
 
@@ -213,8 +265,8 @@ void handleINT()
   writeToMemory(cpu.reg[SP], cpu.reg[PC]);
   // cause <= 4
   cpu.csr[CAUSE] = 4;
-  // status<=status&(~0x4)
-  cpu.csr[STATUS] &= (~0x4);
+  // status<=status|(0x4)
+  cpu.csr[STATUS] |= STATUS_INTERRUPT_MASK;
   // pc<=handler
   cpu.reg[PC] = cpu.csr[HANDLER];
 }
@@ -417,5 +469,42 @@ void handleLOAD(int mode, int regA, int regB, int regC, int disp)
   default:
     cerr << "Error: Bad operation code" << endl;
     break;
+  }
+}
+
+void setTerminalSettings()
+{
+  int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+
+  tcgetattr(STDIN_FILENO, &term);
+  oflags = term.c_lflag;
+
+  term.c_lflag &= ~ICANON & ~ECHO;
+  tcsetattr(STDIN_FILENO, TCSANOW, &term);
+}
+
+void resetTerminalSettings()
+{
+  // Vraća stare terminalske postavke
+  term.c_lflag = oflags;
+  tcsetattr(STDIN_FILENO, TCSADRAIN, &term);
+}
+
+void handleTermOut(int value)
+{
+  term_out = value;
+  cout << static_cast<char>(term_out >> 24) << flush;
+}
+
+void handleTermIn()
+{
+  unsigned char ch;
+  ssize_t ret = read(STDIN_FILENO, &ch, 1);
+
+  if (ret >= 0)
+  {
+    term_in = ch;
+    interrupt = true;
   }
 }

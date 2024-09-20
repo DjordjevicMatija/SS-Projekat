@@ -169,6 +169,7 @@ void asmExternDir(DirectiveArguments *arguments);
 void asmSectionDir(string *name);
 void asmWordDir(DirectiveArguments *arguments);
 void asmSkipDir(string *literal);
+void asmAsciiDir(string* ascii);
 void asmEndDir();
 
 void asmHALT();
