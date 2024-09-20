@@ -25,8 +25,7 @@ clean_assembly:
 	rm -f lex.yy.cpp parser.tab.cpp parser.tab.hpp myparser
 
 clean:
-	rm -f assembler linker emulator
-	@$(MAKE) clean_object_files
+	rm -f assembler linker emulator *.o *.hex
 
 clean_object_files:
-	rm -f *.o *.hex
+	rm -f *.o

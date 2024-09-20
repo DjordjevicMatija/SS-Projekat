@@ -780,12 +780,17 @@ void assignStartingAddresses()
         if (secStart >= (*sectionStartAdresses)[i] && secStart <= (*sectionEndAdresses)[i] ||
             secEnd >= (*sectionStartAdresses)[i] && secEnd <= (*sectionEndAdresses)[i])
         {
-          cerr << "Error: Placing " << secName << " section at " << secStart << " location will overwrite other sections" << endl;
+          cerr << "Error: Placing " << secName << " section at " << hex << secStart << " location will overwrite other sections" << endl;
           exit(-5);
         }
       }
 
       section->startingAddress = secStart;
+
+      // sacuvamo pocetnu i krajnju vrednost sekcije
+      sectionStartAdresses->push_back(secStart);
+      sectionEndAdresses->push_back(secEnd);
+
       // azuriramo pocetnu adresu za smestanje sekcija bez unapred oderedjene adrese
       if (highestStartingAddress < section->startingAddress + section->size)
       {
@@ -809,6 +814,12 @@ void assignStartingAddresses()
     if (skipSections.find(secName) != skipSections.end())
     {
       continue;
+    }
+
+    // provera da li smo presli u prostor za memorijski mapirane registre
+    if (highestStartingAddress + section->size >= 0xFFFFFF00)
+    {
+      cerr << "Error: Addresses from 0xFFFFFFFF00 are reserved for memmory mapped registers" << endl;
     }
 
     // ako sekcija nije preskocena dodaj joj pocetnu adresu
